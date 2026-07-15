@@ -115,6 +115,15 @@ discarding them. Completion: the Step 4 command exits clean on this branch.
 
 ### Step 8 — Open draft PR
 
+First, check whether a usable GitHub remote exists (the same check `itsg-33-assess` Step 1
+uses to detect tracker mode):
+
+```bash
+git remote -v
+```
+
+**If a remote exists:** proceed as below.
+
 Title: `fix(<control-id>): <control name> — <one-line summary>`.
 
 Body (fully self-contained — the reviewer should need nothing else open):
@@ -149,13 +158,19 @@ gh pr create --draft --title "<title>" --body "<body>"
 Completion: a draft PR exists with the correct title format and every body
 field populated (no field left as a placeholder).
 
+**If no remote exists:** stop here — do not run `gh pr create` (there is nothing to open a PR
+against). Tell the user: the fix is committed on branch `itsg33/fix/<control-id>` with tests
+green, but no draft PR was opened because this repo has no GitHub remote; push a remote and
+re-invoke this step (or open the PR manually) once one exists. Completion (no-remote case): the
+branch and its green commit exist; the user has been told why no PR was opened.
+
 ### Step 9 — Update POA&M
 
-Edit `security/evidence/<control-id>.md`'s header block to add or update a
-`**Remediation Ticket:** <PR URL>` line, alongside its existing `Severity` and
-`Finding` fields. The evidence card is the artifact meant to persist into the
-SAR package, so it — not the gap issue or gap file, which close or get deleted
-— is where this link needs to survive.
+**If Step 8 opened a PR:** edit `security/evidence/<control-id>.md`'s header block to add or
+update a `**Remediation Ticket:** <PR URL>` line, alongside its existing `Severity` and
+`Finding` fields. The evidence card is the artifact meant to persist into the SAR package, so
+it — not the gap issue or gap file, which close or get deleted — is where this link needs to
+survive.
 
 For local tracker mode only, also add or update the same
 `**Remediation Ticket:** <PR URL>` line in the still-open gap file, so the
@@ -172,8 +187,11 @@ link either, since it's generated from `assessment-state.yaml`, which also has
 no such field — closing that gap belongs to a future `itsg-33-assess` change,
 not this skill.
 
-Completion: the evidence card's `Remediation Ticket` field is set to the PR
-URL (and, in local mode, so is the gap file's).
+**If Step 8 stopped because there was no remote:** skip this step entirely — there is no PR URL
+to record yet. Proceed directly to Step 10.
+
+Completion: either the evidence card's (and, in local mode, the gap file's) `Remediation
+Ticket` field is set to the PR URL, or Step 8 had no remote and this step was skipped.
 
 ### Step 10 — Continue or stop
 

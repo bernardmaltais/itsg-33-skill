@@ -15,8 +15,9 @@ fi
 
 if awk '
   /^kind: *ClusterRoleBinding/ { in_crb = 1; next }
-  /^---/ { in_crb = 0; next }
-  in_crb && /^ *name: *cluster-admin *$/ { found = 1 }
+  /^---/ { in_crb = 0; in_roleref = 0; next }
+  in_crb && /^ *roleRef:/ { in_roleref = 1; next }
+  in_crb && in_roleref && /^ *name: *cluster-admin *$/ { found = 1 }
   END { exit(found ? 0 : 1) }
 ' "$RBAC_FILE"; then
   echo "check-rbac: FAIL - ClusterRoleBinding to cluster-admin found in $RBAC_FILE" >&2

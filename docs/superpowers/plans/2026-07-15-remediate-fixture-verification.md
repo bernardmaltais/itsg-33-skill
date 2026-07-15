@@ -1,6 +1,6 @@
 # Verify itsg-33-remediate Against the Fixture — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Run `itsg-33-remediate` end-to-end against a scratch copy of `test/fixtures/sample-app/`
 for the AC-6 gap (issue #14), independently verify every step of the ten-step flow, and fix any
@@ -59,7 +59,7 @@ its `Makefile` wrapper.
   later, by `itsg-33-remediate`'s Step 4 test-runner auto-detection (`Makefile` with a `test`
   target).
 
-- [ ] **Step 1: Create temp test fixtures for the checker**
+- [x] **Step 1: Create temp test fixtures for the checker**
 
 ```bash
 mkdir -p /tmp/check-rbac-test
@@ -103,14 +103,14 @@ roleRef:
   name: audit-reader
 ```
 
-- [ ] **Step 2: Run the checker against fail-case.yaml to confirm it doesn't exist yet**
+- [x] **Step 2: Run the checker against fail-case.yaml to confirm it doesn't exist yet**
 
 ```bash
 /home/bernard/github/itsg-33-skill/test/fixtures/sample-app/check-rbac.sh /tmp/check-rbac-test/fail-case.yaml
 ```
 Expected: `No such file or directory` (the script hasn't been created yet).
 
-- [ ] **Step 3: Implement check-rbac.sh**
+- [x] **Step 3: Implement check-rbac.sh**
 
 Create `test/fixtures/sample-app/check-rbac.sh`:
 
@@ -148,7 +148,7 @@ exit 0
 chmod +x /home/bernard/github/itsg-33-skill/test/fixtures/sample-app/check-rbac.sh
 ```
 
-- [ ] **Step 4: Run against fail-case.yaml to confirm it correctly fails**
+- [x] **Step 4: Run against fail-case.yaml to confirm it correctly fails**
 
 ```bash
 /home/bernard/github/itsg-33-skill/test/fixtures/sample-app/check-rbac.sh /tmp/check-rbac-test/fail-case.yaml; echo "exit: $?"
@@ -156,7 +156,7 @@ chmod +x /home/bernard/github/itsg-33-skill/test/fixtures/sample-app/check-rbac.
 Expected: prints `check-rbac: FAIL - ClusterRoleBinding to cluster-admin found in
 /tmp/check-rbac-test/fail-case.yaml` and `exit: 1`.
 
-- [ ] **Step 5: Run against pass-case.yaml to confirm it correctly passes**
+- [x] **Step 5: Run against pass-case.yaml to confirm it correctly passes**
 
 ```bash
 /home/bernard/github/itsg-33-skill/test/fixtures/sample-app/check-rbac.sh /tmp/check-rbac-test/pass-case.yaml; echo "exit: $?"
@@ -164,7 +164,7 @@ Expected: prints `check-rbac: FAIL - ClusterRoleBinding to cluster-admin found i
 Expected: prints `check-rbac: PASS - no ClusterRoleBinding to cluster-admin in
 /tmp/check-rbac-test/pass-case.yaml` and `exit: 0`.
 
-- [ ] **Step 6: Run against the real (unpatched) fixture using the default path**
+- [x] **Step 6: Run against the real (unpatched) fixture using the default path**
 
 ```bash
 cd /home/bernard/github/itsg-33-skill/test/fixtures/sample-app && ./check-rbac.sh; echo "exit: $?"
@@ -173,7 +173,7 @@ Expected: `check-rbac: FAIL - ClusterRoleBinding to cluster-admin found in k8s/r
 `exit: 1` — confirms the default-path wiring, and confirms the real fixture is still in its
 known deliberate-Fail state.
 
-- [ ] **Step 7: Create the Makefile**
+- [x] **Step 7: Create the Makefile**
 
 Create `test/fixtures/sample-app/Makefile`:
 
@@ -183,20 +183,20 @@ test:
 	./check-rbac.sh
 ```
 
-- [ ] **Step 8: Run `make test` to confirm the Makefile wiring**
+- [x] **Step 8: Run `make test` to confirm the Makefile wiring**
 
 ```bash
 cd /home/bernard/github/itsg-33-skill/test/fixtures/sample-app && make test; echo "exit: $?"
 ```
 Expected: same output as Step 6, `exit: 1`.
 
-- [ ] **Step 9: Clean up the temp test fixtures**
+- [x] **Step 9: Clean up the temp test fixtures**
 
 ```bash
 rm -rf /tmp/check-rbac-test
 ```
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 cd /home/bernard/github/itsg-33-skill
@@ -230,7 +230,7 @@ remote).
   containing Task 1's `Makefile`/`check-rbac.sh` — consumed by Task 3's assess dispatch and
   Task 4's remediate dispatch.
 
-- [ ] **Step 1: Create the scratch copy**
+- [x] **Step 1: Create the scratch copy**
 
 ```bash
 rm -rf /tmp/itsg33-verify-remediate
@@ -240,7 +240,7 @@ ls /tmp/itsg33-verify-remediate/security 2>&1
 Expected: `ls: cannot access '/tmp/itsg33-verify-remediate/security': No such file or directory`
 (confirms a clean starting state).
 
-- [ ] **Step 2: git init and baseline commit**
+- [x] **Step 2: git init and baseline commit**
 
 ```bash
 cd /tmp/itsg33-verify-remediate
@@ -251,7 +251,7 @@ git log --oneline
 ```
 Expected: one commit, message `Baseline: sample-app fixture with check-rbac.sh test`.
 
-- [ ] **Step 3: Confirm no remote (tracker mode will auto-detect local)**
+- [x] **Step 3: Confirm no remote (tracker mode will auto-detect local)**
 
 ```bash
 cd /tmp/itsg33-verify-remediate && git remote -v
@@ -273,7 +273,7 @@ Expected: empty output (no remotes configured).
   `security/assessment-state.yaml`, `security/evidence/AC-*.md` (11 files),
   `security/gaps/AC-6.md` — consumed by Task 4's remediate dispatch.
 
-- [ ] **Step 1: Dispatch the targeted AC-family assess agent**
+- [x] **Step 1: Dispatch the targeted AC-family assess agent**
 
 Use the Agent tool (general-purpose subagent) with this prompt:
 
@@ -313,7 +313,7 @@ Report back: the finding for every one of the 11 AC controls, and the exact list
 you created under security/.
 ```
 
-- [ ] **Step 2: Verify the reported findings**
+- [x] **Step 2: Verify the reported findings**
 
 Confirm the agent's report shows: AC-2 Pass, AC-3 Pass, AC-4 Pass, AC-5 Pass, AC-6 Fail, AC-7 Not
 Assessable, AC-8 Not Assessable, AC-11 Not Assessable, AC-12 Not Assessable, AC-17 Not Assessable,
@@ -322,7 +322,7 @@ control's finding doesn't match, stop and classify per the Global Constraints di
 discipline before continuing (this would indicate the AC-family rubric regressed since issue
 #15's Task 6 fixes — a genuine `controls.md`/`SKILL.md` gap, not something to paper over here).
 
-- [ ] **Step 3: Independently verify the output files (don't trust the report alone)**
+- [x] **Step 3: Independently verify the output files (don't trust the report alone)**
 
 ```bash
 test -f /tmp/itsg33-verify-remediate/security/itsg33.yaml && echo "itsg33.yaml OK"
@@ -336,7 +336,7 @@ Expected: `itsg33.yaml OK`, `assessment-state.yaml OK`, `11` (one evidence card 
 `AC-6.md` listed in `security/gaps/` (and no other file), `fragments dir cleaned up OK`, and the
 tracker line shows `local`.
 
-- [ ] **Step 4: Read the AC-6 gap file and evidence card directly**
+- [x] **Step 4: Read the AC-6 gap file and evidence card directly**
 
 ```bash
 cat /tmp/itsg33-verify-remediate/security/gaps/AC-6.md
@@ -358,7 +358,7 @@ commit).
 - Produces: a pass/fail verdict for Steps 1–7, plus a captured failure mode for Step 8, used by
   Task 5 to confirm the fix and Task 6 to re-verify.
 
-- [ ] **Step 1: Dispatch the remediate agent**
+- [x] **Step 1: Dispatch the remediate agent**
 
 Use the Agent tool (general-purpose subagent) with this prompt:
 
@@ -394,12 +394,12 @@ remote - run it anyway and report exactly what happens. That failure, if it happ
 expected and will be fixed in a later step of this plan, not by you working around it now.
 ```
 
-- [ ] **Step 2: Verify Steps 1–3 against the Task 3 gap record**
+- [x] **Step 2: Verify Steps 1–3 against the Task 3 gap record**
 
 Confirm the report's Step 1 record matches Task 3's AC-6 gap file/evidence card (control AC-6,
 severity P1, finding Fail).
 
-- [ ] **Step 3: Independently verify the Step 4 baseline**
+- [x] **Step 3: Independently verify the Step 4 baseline**
 
 ```bash
 cd /tmp/itsg33-verify-remediate && git log --oneline --all
@@ -414,7 +414,7 @@ cd /tmp/itsg33-verify-remediate && make test; echo "exit: $?"
 Expected: `check-rbac: FAIL - ...` and `exit: 1`, matching what the agent reported as its Step 4
 baseline.
 
-- [ ] **Step 4: Independently verify the Step 6 branch and Step 7 green result**
+- [x] **Step 4: Independently verify the Step 6 branch and Step 7 green result**
 
 ```bash
 cd /tmp/itsg33-verify-remediate
@@ -428,7 +428,7 @@ Expected: branch `itsg33/fix/AC-6` exists with at least one commit beyond baseli
 shows the `cluster-admin` `ClusterRoleBinding` removed or replaced with a narrower binding, and
 `make test` on that branch exits 0.
 
-- [ ] **Step 5: Confirm the Step 8 failure is exactly the expected discrepancy**
+- [x] **Step 5: Confirm the Step 8 failure is exactly the expected discrepancy**
 
 Read the agent's reported Step 8 command/output. Confirm it attempted `gh pr create --draft
 ...` and failed because `/tmp/itsg33-verify-remediate` has no GitHub remote (e.g. `gh: unknown
@@ -446,7 +446,7 @@ Task 5 — Task 5's fix is specifically for the no-remote case.
 
 **Interfaces:** N/A (prose-only change to an existing skill step; no new interfaces).
 
-- [ ] **Step 1: Replace Step 8's body**
+- [x] **Step 1: Replace Step 8's body**
 
 Find the `### Step 8 — Open draft PR` section (from its heading through its `Completion:` line,
 currently reading in part `gh pr create --draft --title "<title>" --body "<body>"` unconditionally)
@@ -505,7 +505,7 @@ re-invoke this step (or open the PR manually) once one exists. Completion (no-re
 branch and its green commit exist; the user has been told why no PR was opened.
 ```
 
-- [ ] **Step 2: Update Step 9's opening sentence and completion criterion**
+- [x] **Step 2: Update Step 9's opening sentence and completion criterion**
 
 Find the `### Step 9 — Update POA&M` section's opening line (`Edit
 security/evidence/<control-id>.md's header block to add or update a **Remediation Ticket:** <PR
@@ -542,7 +542,7 @@ Completion: either the evidence card's (and, in local mode, the gap file's) `Rem
 Ticket` field is set to the PR URL, or Step 8 had no remote and this step was skipped.
 ```
 
-- [ ] **Step 3: Consistency check (grep)**
+- [x] **Step 3: Consistency check (grep)**
 
 ```bash
 grep -n "^### Step" skills/itsg-33-remediate/SKILL.md
@@ -560,14 +560,14 @@ grep -n "no remote" skills/itsg-33-remediate/SKILL.md
 ```
 Expected: at least 2 occurrences (Step 8's no-remote branch, Step 9's no-remote branch).
 
-- [ ] **Step 4: Full read-through**
+- [x] **Step 4: Full read-through**
 
 Read the entire `skills/itsg-33-remediate/SKILL.md` file top to bottom. Confirm:
 - Step 8 and Step 9 read coherently as a pair (Step 9 correctly branches on what Step 8 did).
 - No other step assumes a remote exists (Steps 1–7 and Step 10 are all remote-independent —
   confirm this is still true after the edit, i.e. nothing else needs a matching change).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/itsg-33-remediate/SKILL.md
@@ -603,7 +603,7 @@ from before the fix — start clean rather than reusing it).
 **Interfaces:**
 - Consumes: the fixed `skills/itsg-33-remediate/SKILL.md` from Task 5, `skills/itsg-33-assess/SKILL.md`.
 
-- [ ] **Step 1: Create a fresh scratch copy**
+- [x] **Step 1: Create a fresh scratch copy**
 
 ```bash
 rm -rf /tmp/itsg33-verify-remediate2
@@ -618,7 +618,7 @@ git remote -v
 ```
 Expected: `ls` reports `No such file or directory` (clean start), one commit, no remotes.
 
-- [ ] **Step 2: Re-establish the AC-6 gap via a targeted AC-family assess dispatch**
+- [x] **Step 2: Re-establish the AC-6 gap via a targeted AC-family assess dispatch**
 
 Use the Agent tool (general-purpose subagent) with this prompt:
 
@@ -665,7 +665,7 @@ exist under `/tmp/itsg33-verify-remediate2`; the fragments directory was cleaned
 mode is `local`; and the gap file/evidence card read back with control AC-6, severity P1,
 finding Fail.
 
-- [ ] **Step 3: Dispatch the remediate agent against the fresh copy with the fixed SKILL.md**
+- [x] **Step 3: Dispatch the remediate agent against the fresh copy with the fixed SKILL.md**
 
 Use the Agent tool (general-purpose subagent) with this prompt:
 
@@ -700,7 +700,7 @@ Report back, in order:
 Do not stop early for any reason short of an actual step failure.
 ```
 
-- [ ] **Step 4: Verify all of ticket #14's acceptance criteria directly**
+- [x] **Step 4: Verify all of ticket #14's acceptance criteria directly**
 
 ```bash
 cd /tmp/itsg33-verify-remediate2
@@ -713,26 +713,26 @@ cat security/gaps/AC-6.md | grep -i "Remediation Ticket" || echo "no Remediation
 ```
 
 Confirm, matching ticket #14's acceptance criteria:
-- [ ] AC-6 presented as the first (only) gap, P1 severity (from Task 6 Step 3's report, cross-
+- [x] AC-6 presented as the first (only) gap, P1 severity (from Task 6 Step 3's report, cross-
       checked against `security/evidence/AC-6.md`).
-- [ ] Test baseline captured (`Makefile` detected, `make test` run, baseline FAIL) before any
+- [x] Test baseline captured (`Makefile` detected, `make test` run, baseline FAIL) before any
       fix was applied.
-- [ ] Branch `itsg33/fix/AC-6` created from the correct base commit.
-- [ ] The fix removes or scopes the `cluster-admin` binding (`git diff main itsg33/fix/AC-6 --
+- [x] Branch `itsg33/fix/AC-6` created from the correct base commit.
+- [x] The fix removes or scopes the `cluster-admin` binding (`git diff main itsg33/fix/AC-6 --
       k8s/rbac.yaml`).
-- [ ] `make test` passes on the branch.
-- [ ] Step 8 correctly stops with no remote (no `gh pr create` error this time — a clean,
+- [x] `make test` passes on the branch.
+- [x] Step 8 correctly stops with no remote (no `gh pr create` error this time — a clean,
       reported "no remote, PR deferred" outcome instead) — this replaces the ticket's literal
       "draft PR opened" criterion per the tracker-mode decision recorded in the spec.
-- [ ] `Remediation Ticket` is **not** set in either `security/evidence/AC-6.md` or
+- [x] `Remediation Ticket` is **not** set in either `security/evidence/AC-6.md` or
       `security/gaps/AC-6.md` (Step 9 correctly skipped since there's no PR URL yet) — this
       replaces the ticket's literal "`remediation_ticket` populated" criterion for the same
       reason.
-- [ ] No discrepancies found in this re-run beyond the already-fixed Step 8/9 gate (if any new
+- [x] No discrepancies found in this re-run beyond the already-fixed Step 8/9 gate (if any new
       discrepancy appears, classify it per the Global Constraints discipline and decide with the
       user whether it needs its own fix before closing out).
 
-- [ ] **Step 5: Clean up scratch copies**
+- [x] **Step 5: Clean up scratch copies**
 
 ```bash
 rm -rf /tmp/itsg33-verify-remediate /tmp/itsg33-verify-remediate2
@@ -746,7 +746,7 @@ rm -rf /tmp/itsg33-verify-remediate /tmp/itsg33-verify-remediate2
 plan produces). If Task 6 surfaced and required fixing a further discrepancy, that fix should
 already have been committed following Task 5's pattern before reaching this task.
 
-- [ ] **Step 1: Confirm nothing is left uncommitted**
+- [x] **Step 1: Confirm nothing is left uncommitted**
 
 ```bash
 cd /home/bernard/github/itsg-33-skill && git status
@@ -754,7 +754,7 @@ cd /home/bernard/github/itsg-33-skill && git status
 Expected: clean (no uncommitted changes) — Task 1's fixture test and Task 5's Step 8/9 fix are
 the only repo changes this plan makes, both already committed.
 
-- [ ] **Step 2: Summarize the verification result for the user**
+- [x] **Step 2: Summarize the verification result for the user**
 
 Report: which of ticket #14's 11 verification steps and 8 acceptance criteria passed, the one
 discrepancy found and fixed (Step 8's unconditional `gh pr create`), and that issue #14 is ready

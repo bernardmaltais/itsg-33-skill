@@ -122,9 +122,7 @@ uses to detect tracker mode):
 git remote -v
 ```
 
-**If a remote exists:** proceed as below.
-
-Title: `fix(<control-id>): <control name> — <one-line summary>`.
+**If a remote exists:** proceed as below. Title: `fix(<control-id>): <control name> — <one-line summary>`.
 
 Body (fully self-contained — the reviewer should need nothing else open):
 

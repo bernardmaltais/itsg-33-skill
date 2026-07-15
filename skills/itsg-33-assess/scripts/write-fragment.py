@@ -45,8 +45,7 @@ def validate(family, data):
             fail(f"{control_id}: control entry must be an object")
         for field in REQUIRED_CONTROL_FIELDS:
             if field not in control:
-                fail(f"{control_id}: missing required field 'confidence'" if field == "confidence"
-                     else f"{control_id}: missing required field '{field}'")
+                fail(f"{control_id}: missing required field '{field}'")
 
         if control["finding"] not in VALID_FINDINGS:
             fail(f"{control_id}: invalid finding {control['finding']!r}, "

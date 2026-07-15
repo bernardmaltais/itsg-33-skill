@@ -199,25 +199,43 @@ Completion: one `.md` file per control in the assigned family exists in `securit
 
 *(End of per-control loop.)*
 
-Write the family's results to a scratch fragment file
-`security/.assessment-fragments/<family>.yaml`:
-```yaml
-family: <family>
-controls:
-  <control-id>:
-    finding: <Pass | Fail | Not Assessable>
-    confidence: <string>
-    risk_summary: <string>
-    implementation_approach: <string>
-    evidence_artefacts: [<relative path>, ...]
-    client_responsibility: <string>
-    files_read:
-      <relative path>: <sha256>
+Write the family's results as JSON to a scratch input file
+`security/.assessment-fragments/<family>.input.json`:
+```json
+{
+  "family": "<family>",
+  "controls": {
+    "<control-id>": {
+      "finding": "<Pass | Fail | Not Assessable>",
+      "confidence": "<string>",
+      "risk_summary": "<string>",
+      "implementation_approach": "<string>",
+      "evidence_artefacts": ["<relative path>", "..."],
+      "client_responsibility": "<string>",
+      "files_read": {"<relative path>": "<sha256>"}
+    }
+  }
+}
 ```
-Completion: every control in the assigned family appears exactly once in the fragment file.
 
-**Failure handling:** If a subagent errors, returns malformed output, or produces a fragment
-missing/duplicating a control, the orchestrator retries that one family's subagent once. If the
+Then run:
+```bash
+python3 skills/itsg-33-assess/scripts/write-fragment.py <family> \
+  security/.assessment-fragments/<family>.input.json \
+  security/.assessment-fragments/<family>.json
+```
+
+If this exits non-zero, its stderr names exactly what is wrong (missing field, invalid finding
+value, malformed JSON, invalid `files_read` hash). Fix the input file and re-run the script — up
+to 2 attempts. If it still fails after 2 attempts, this counts as the "malformed output" case in
+the failure handling below.
+
+Completion: every control in the assigned family appears exactly once in
+`security/.assessment-fragments/<family>.json`, and the script exited 0.
+
+**Failure handling:** If a subagent errors, exhausts its 2 write-fragment.py
+retry attempts without a clean exit, or produces a fragment missing/duplicating a control, the
+orchestrator retries that one family's subagent once. If the
 retry also fails, abort the entire run: report which family failed and why, leave
 `security/assessment-state.yaml` and `security/evidence/` untouched, and leave
 `security/.assessment-fragments/` in place for debugging. Do not proceed to Step 5.
@@ -226,7 +244,7 @@ retry also fails, abort the entire run: report which family failed and why, leav
 
 Once all 9 fragments exist in `security/.assessment-fragments/`:
 
-1. Read all fragments. Confirm every control in `controls.md` appears in exactly one
+1. Read and JSON-parse all fragments. Confirm every control in `controls.md` appears in exactly one
    fragment. A control missing from all fragments, or present in more than one, is treated
    as a subagent failure per Step 4's failure handling: retry that family once, then abort.
 2. Merge the fragments' `controls:` maps into a single map and write/update

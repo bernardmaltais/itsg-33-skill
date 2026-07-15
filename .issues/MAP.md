@@ -1,7 +1,20 @@
 ---
 label: wayfinder:map
 status: open
+tracker: https://github.com/bernardmaltais/itsg-33-skill/issues/1
+note: Issues are now tracked on GitHub — this file is superseded.
 ---
+
+# Map: ITSG-33 Code Assessment Skill
+
+**Tracker:** https://github.com/bernardmaltais/itsg-33-skill/issues/1
+
+Issues migrated to GitHub:
+- Map: https://github.com/bernardmaltais/itsg-33-skill/issues/1
+- Ticket 001 (CLOSED): https://github.com/bernardmaltais/itsg-33-skill/issues/2
+- Ticket 002: https://github.com/bernardmaltais/itsg-33-skill/issues/3
+- Ticket 003: https://github.com/bernardmaltais/itsg-33-skill/issues/4
+- Ticket 004: https://github.com/bernardmaltais/itsg-33-skill/issues/5
 
 # Map: ITSG-33 Code Assessment Skill
 

@@ -222,40 +222,40 @@ retry also fails, abort the entire run: report which family failed and why, leav
 `security/assessment-state.yaml` and `security/evidence/` untouched, and leave
 `security/.assessment-fragments/` in place for debugging. Do not proceed to Step 5.
 
----
-*(End of per-control loop. The following check runs once after all controls are assessed.)*
+### Step 5 — Merge state
 
-**Plausibility check**
-If `profile: PBMM` and **all** of the following returned Not Assessable:
-- Every SC (System and Communications Protection) control
-- Every IA (Identification and Authentication) control
+Once all 9 fragments exist in `security/.assessment-fragments/`:
 
-→ append a synthetic finding `PLAUSIBILITY-WARNING`:
-  - Finding: Not Assessable
-  - Confidence: "PBMM declared but no encryption, auth, or network config was found. Verify the repo contains the relevant IaC or manifests, or that the system boundary is correctly scoped."
+1. Read all fragments. Confirm every control in `controls.md` appears in exactly one
+   fragment. A control missing from all fragments, or present in more than one, is treated
+   as a subagent failure per Step 4's failure handling: retry that family once, then abort.
+2. Merge the fragments' `controls:` maps into a single map and write/update
+   `security/assessment-state.yaml`:
+   ```yaml
+   last_run: <ISO-8601 timestamp>
+   controls:
+     <control-id>:
+       finding: <Pass | Fail | Not Assessable>
+       confidence: <string>
+       files_read:
+         <relative path>: <sha256>
+   ```
+3. **Plausibility check** — if `profile: PBMM` and **all** of the following returned Not
+   Assessable in the merged result:
+   - Every SC (System and Communications Protection) control
+   - Every IA (Identification and Authentication) control
 
-### Step 5 — Update assessment state
+   → append a synthetic finding `PLAUSIBILITY-WARNING`:
+     - Finding: Not Assessable
+     - Confidence: "PBMM declared but no encryption, auth, or network config was found.
+       Verify the repo contains the relevant IaC or manifests, or that the system boundary
+       is correctly scoped."
+4. Delete `security/.assessment-fragments/`.
 
-Write/update `security/assessment-state.yaml`. Structure:
-```yaml
-last_run: <ISO-8601 timestamp>
-controls:
-  <control-id>:
-    finding: <Pass | Fail | Not Assessable>
-    confidence: <string>
-    files_read:
-      <relative path>: <sha256>
-```
-Completion: file written; every assessed (non-cached) control has an updated entry.
+Completion: `security/assessment-state.yaml` contains an entry for every control in
+`controls.md`; the fragment directory no longer exists.
 
-### Step 6 — Write evidence cards
-
-For each control with a finding (including cached), write/update
-`security/evidence/<control-id>.md` using the template at [`evidence-card.md`](evidence-card.md)
-(load via this context pointer). Populate all fields from the finding recorded in Step 4.
-Completion: one `.md` file per assessed control exists in `security/evidence/`.
-
-### Step 7 — Create gap issues
+### Step 6 — Create gap issues
 
 For each **Fail** finding, create a gap issue only if no open gap already exists for
 that control.
@@ -273,7 +273,7 @@ that control.
 
 Completion: every Fail finding has a gap issue or gap file; no duplicates created.
 
-### Step 8 — Regenerate assessment report (Markdown)
+### Step 7 — Regenerate assessment report (Markdown)
 
 Write/overwrite `security/assessment-report.md`. Structure:
 
@@ -314,10 +314,10 @@ Write/overwrite `security/assessment-report.md`. Structure:
 Completion: file written; POA&M includes one row per Fail finding; evidence cards index
 links to every file in `security/evidence/`.
 
-### Step 9 — Regenerate assessment report (HTML)
+### Step 8 — Regenerate assessment report (HTML)
 
 Write/overwrite `security/assessment-report.html` as a **self-contained** file (inline CSS,
-no external resources). Mirror the structure from Step 8. Include:
+no external resources). Mirror the structure from Step 7. Include:
 
 - Summary dashboard as stat tiles (Pass count in green, Fail in red, Not Assessable in grey)
 - Control family breakdown as a simple table

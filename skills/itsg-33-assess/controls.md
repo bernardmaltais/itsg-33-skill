@@ -22,8 +22,9 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 **Severity:** P1  
 **File patterns:** `**/*.tf`, `**/rbac*.yaml`, `**/role*.yaml`, `**/serviceaccount*.yaml`, `**/values*.yaml`  
 **Pass signals:** Service accounts explicitly defined with minimal scopes; no default service account tokens auto-mounted (`automountServiceAccountToken: false`); IaC creates named service principals with scoped permissions; stale accounts not present.  
-**Fail signals:** `automountServiceAccountToken` absent or true on pod specs; service accounts with no explicit role binding; default service accounts used for workloads; broad IAM roles assigned to service principals.  
+**Fail signals:** `automountServiceAccountToken` absent or true on pod specs; service accounts with no explicit role binding at all; default service accounts used for workloads.  
 **Not Assessable:** No Terraform, K8s manifests, or Helm values files found in repo.
+**Note:** This control is about whether accounts are explicitly defined and provisioned deliberately — not about how much privilege they hold. Over-broad privilege on an otherwise well-defined, named account is AC-3's and AC-6's concern; don't fail AC-2 for it.
 
 ---
 
@@ -33,6 +34,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 **Pass signals:** RBAC roles with explicit `rules` arrays (not wildcard); OPA Gatekeeper or Kyverno policies enforcing access constraints; IAM policies in Terraform with explicit `allow` actions (no `*`).  
 **Fail signals:** Wildcard (`*`) verbs or resources in RBAC Role/ClusterRole rules; IAM policies with `"Action": "*"`; no admission controller policies found.  
 **Not Assessable:** No RBAC manifests, IAM Terraform resources, or admission controller configs found.
+**Note:** This control is about whether an access enforcement *mechanism* exists and is granular (explicit, non-wildcard rules) — not about whether privilege is minimized overall. A properly-scoped Role can make this control Pass even if a separate, broader grant elsewhere makes AC-6 Fail; the two controls assess different properties of the same RBAC surface and are not required to agree.
 
 ---
 
@@ -132,8 +134,8 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 **Severity:** P1  
 **File patterns:** `**/audit*.yaml`, `**/logging*.yaml`, `**/*.tf`, `**/fluent*.yaml`, `**/app*.yaml`  
 **Pass signals:** Log format includes: timestamp, event type, source identity, resource affected, outcome (success/failure); structured JSON log format configured; log fields explicitly enumerated in config.  
-**Fail signals:** Log format lacks required fields (no identity field, no outcome field); unstructured text logging; no log schema defined.  
-**Not Assessable:** No audit or log format config found.
+**Fail signals:** Log format lacks required fields (no identity field, no outcome field); unstructured text logging; no log schema defined; no audit logging pipeline exists anywhere in the repo (this control is foundational alongside AU-2/AU-12 — see SKILL.md's cascading-NA rule).  
+**Not Assessable:** N/A for total absence of a pipeline (that's Fail — see above). Only use Not Assessable when an audit/logging pipeline already exists somewhere in the repo but its record-content format genuinely can't be determined from repo contents (rare).
 
 ---
 
@@ -177,8 +179,8 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 **Severity:** P1  
 **File patterns:** `**/*.tf`, `**/retention*.yaml`, `**/policy*.yaml`  
 **Pass signals:** Log retention explicitly set ≥ 2 years (PBMM requirement) in Terraform or retention policy; lifecycle policy archives logs after active period; retention policy applied to log storage resource.  
-**Fail signals:** Retention period < 2 years or not set (defaults to shorter); no lifecycle/retention policy on log storage.  
-**Not Assessable:** No log retention config or storage Terraform found.
+**Fail signals:** Retention period < 2 years or not set (defaults to shorter) **on a log or audit destination**; no lifecycle/retention policy on log storage.  
+**Not Assessable:** No log retention config or log-destination storage Terraform found. This control is about retention of *audit/log* data specifically — a retention setting on an unrelated resource (e.g., a database or blob **backup** policy) is not evidence for this control; if the only retention-shaped resource in the repo is a backup policy rather than a log destination, this is Not Assessable, not Fail.
 
 ---
 
@@ -225,7 +227,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 **File patterns:** `**/*.tf`, `**/secret*.yaml`, `**/vault*.yaml`, `**/keyvault*.tf`, `**/*.yaml`, `**/*.env.example`  
 **Pass signals:** Secrets managed via Vault, Azure Key Vault, or AWS Secrets Manager in Terraform; no hardcoded credentials in code or manifests; Kubernetes Secrets referenced from external secrets operator or sealed secrets; credential rotation configured.  
 **Fail signals:** Hardcoded passwords, tokens, or keys in any file; Kubernetes Secrets with base64 values in repo (not sealed/external); no secrets management tooling referenced.  
-**Not Assessable:** No secrets management config found (absence alone is a Fail signal — escalate to Fail if any credentials-shaped strings found).
+**Not Assessable:** No files matching the patterns above exist in the repo at all, or the matched files are unrelated to credential handling (e.g., the only matches are CI workflow YAML or infrastructure with nothing that touches secrets, tokens, or passwords) — i.e., this system has no visible credential-handling surface to assess. If files exist that clearly *do* handle credentials (app config, Terraform provisioning a database/API, Kubernetes Secrets, etc.) but show no secrets-management construct and no credential-shaped strings, do not default to Not Assessable — escalate to **Fail**, since an application handling credentials with no secrets management story anywhere is itself the gap.
 
 ---
 

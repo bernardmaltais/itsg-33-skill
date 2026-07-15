@@ -64,14 +64,29 @@ Completion: list of detected signal families recorded (e.g., `[terraform, kubern
 
 Load [`controls.md`](controls.md) via this context pointer. Completion: all control entries are loaded and available for Step 4.
 
-### Step 4 — Assess each control
+### Step 4 — Dispatch family subagents
 
-For each control in `controls.md`, in order:
+Partition `controls.md` by control family prefix: **AC, AU, IA, SC, CM, SI, SA, CP, RA**. In a
+single message, dispatch one subagent per family (Task/Agent tool, parallel calls) — every
+family gets a subagent every run, even if none of its controls changed since the last run.
+
+Each subagent's dispatch prompt must include:
+- The active `profile`, `system_name`, `system_boundary`, and tracker mode (from Step 1)
+- The detected signal list from Step 2
+- A pointer to `controls.md`, with an instruction to process only entries whose control ID
+  starts with its assigned family prefix
+- A pointer to `evidence-card.md` (the template to use when writing evidence cards)
+- The subagent contract below (steps 4a-4d and 6)
+
+**Subagent contract (per family)**
+
+For each control in the assigned family, in order:
 
 **4a. Cache check**
 Read `security/assessment-state.yaml`. For each file listed under this control's
 `files_read`, hash the current content and compare to the stored hash. If all hashes
-match → mark this control `cached`, carry the prior finding forward, skip to next control.
+match → mark this control `cached`, carry the prior finding forward, and do not rewrite
+its evidence card. Skip to next control.
 
 **4b. Read relevant files**
 Glob the control's **File patterns** against the repo. If no files match any pattern →
@@ -170,11 +185,42 @@ Derive:
 - `implementation_approach`: narrative of how the system implements (or fails to implement) the control, citing specific files and config constructs
 - `evidence_artefacts`: bulleted list of relative file paths with a note on what each demonstrates
 - `client_responsibility`: what application teams must do to maintain their side of this control
-- `files_read`: map of `<relative path>` → SHA-256 of file content (used for cache check in 4a and stored in Step 5)
+- `files_read`: map of `<relative path>` → SHA-256 of file content (used for cache check in 4a and stored in the fragment file)
 
 **4d. Record finding**
-Completion criterion: every control in `controls.md` has a finding (Pass / Fail /
+Completion criterion: every control in the assigned family has a finding (Pass / Fail /
 Not Assessable / cached) and a confidence note.
+
+**6. Write evidence card**
+For each control with a finding (including cached, per 4a's no-rewrite rule), write/update
+`security/evidence/<control-id>.md` using the template at [`evidence-card.md`](evidence-card.md)
+(load via this context pointer). Populate all fields from the finding recorded in 4c/4d.
+Completion: one `.md` file per control in the assigned family exists in `security/evidence/`.
+
+*(End of per-control loop.)*
+
+Write the family's results to a scratch fragment file
+`security/.assessment-fragments/<family>.yaml`:
+```yaml
+family: <family>
+controls:
+  <control-id>:
+    finding: <Pass | Fail | Not Assessable>
+    confidence: <string>
+    risk_summary: <string>
+    implementation_approach: <string>
+    evidence_artefacts: [<relative path>, ...]
+    client_responsibility: <string>
+    files_read:
+      <relative path>: <sha256>
+```
+Completion: every control in the assigned family appears exactly once in the fragment file.
+
+**Failure handling:** If a subagent errors, returns malformed output, or produces a fragment
+missing/duplicating a control, the orchestrator retries that one family's subagent once. If the
+retry also fails, abort the entire run: report which family failed and why, leave
+`security/assessment-state.yaml` and `security/evidence/` untouched, and leave
+`security/.assessment-fragments/` in place for debugging. Do not proceed to Step 5.
 
 ---
 *(End of per-control loop. The following check runs once after all controls are assessed.)*

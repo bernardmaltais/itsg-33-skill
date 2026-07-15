@@ -87,6 +87,21 @@ class WriteFragmentTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("json", result.stderr.lower())
 
+    def test_cached_true_is_valid(self):
+        control = dict(VALID_CONTROL, cached=True)
+        payload = {"family": "AU", "controls": {"AU-2": control}}
+        result = self.run_script("AU", payload)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        written = json.loads(self.output_path.read_text())
+        self.assertTrue(written["controls"]["AU-2"]["cached"])
+
+    def test_invalid_cached_type_fails(self):
+        control = dict(VALID_CONTROL, cached="yes")
+        payload = {"family": "AU", "controls": {"AU-2": control}}
+        result = self.run_script("AU", payload)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("cached", result.stderr.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

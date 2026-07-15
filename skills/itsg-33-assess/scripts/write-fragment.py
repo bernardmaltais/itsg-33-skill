@@ -65,6 +65,9 @@ def validate(family, data):
                 fail(f"{control_id}: files_read[{path!r}] is not a 64-char lowercase "
                      f"SHA-256 hex digest: {digest!r}")
 
+        if "cached" in control and not isinstance(control["cached"], bool):
+            fail(f"{control_id}: 'cached' must be a boolean if present")
+
 
 def main():
     if len(sys.argv) != 4:

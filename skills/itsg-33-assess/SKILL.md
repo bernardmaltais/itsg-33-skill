@@ -84,15 +84,16 @@ For each control in the assigned family, in order:
 
 **4a. Cache check**
 Read `security/assessment-state.yaml`. For each file listed under this control's
-`files_read`, hash the current content and compare to the stored hash. If all hashes
-match → mark this control `cached` and do not rewrite its evidence card. Copy `finding`,
-`confidence`, and `files_read` **verbatim, character-for-character**, from
-`assessment-state.yaml` into this control's fragment entry — do not reword, summarize, or
-regenerate `confidence` from the evidence card or from re-reading the source files, even if
-you can produce a phrasing you think reads better. For the fragment fields
-`assessment-state.yaml` does not store (`risk_summary`, `implementation_approach`,
-`evidence_artefacts`, `client_responsibility`), copy them verbatim from the existing
-`security/evidence/<control-id>.md` instead — same rule, no rewording. Skip to next control.
+`files_read`, hash the current content and compare to the stored hash. If all hashes match,
+this control is cached: set `"cached": true` on its fragment entry (Step 4's write-up below),
+and do not rewrite its evidence card. `merge-state.py` (Step 5) is the sole authority for a
+cached control's `finding`, `confidence`, and `files_read` in `assessment-state.yaml` — it
+always uses the values already stored there, discarding whatever you write for these fields
+on a cached control, so you do not need to reproduce them precisely; carrying forward your
+best-available copy is enough. The remaining fragment fields (`risk_summary`,
+`implementation_approach`, `evidence_artefacts`, `client_responsibility`) are never read for a
+cached control either, since its evidence card is not rewritten — a short placeholder such as
+`"(cached — see evidence card)"` is fine. Skip to next control.
 
 **4b. Read relevant files**
 Glob the control's **File patterns** against the repo. If no files match any pattern →
@@ -218,11 +219,14 @@ Write the family's results as JSON to a scratch input file
       "implementation_approach": "<string>",
       "evidence_artefacts": ["<relative path>", "..."],
       "client_responsibility": "<string>",
-      "files_read": {"<relative path>": "<sha256>"}
+      "files_read": {"<relative path>": "<sha256>"},
+      "cached": true
     }
   }
 }
 ```
+(Omit `"cached"` entirely for a control that was freshly assessed this run — only set it to
+`true` for a cache hit per Step 4a.)
 
 Then run:
 ```bash
@@ -250,31 +254,37 @@ retry also fails, abort the entire run: report which family failed and why, leav
 
 Once all 9 fragments exist in `security/.assessment-fragments/`:
 
-1. Read and JSON-parse all fragments. Confirm every control in `controls.md` appears in exactly one
-   fragment. A control missing from all fragments, or present in more than one, is treated
-   as a subagent failure per Step 4's failure handling: retry that family once, then abort.
-2. Merge the fragments' `controls:` maps into a single map and write/update
-   `security/assessment-state.yaml`:
-   ```yaml
-   last_run: <ISO-8601 timestamp>
-   controls:
-     <control-id>:
-       finding: <Pass | Fail | Not Assessable>
-       confidence: <string>
-       files_read:
-         <relative path>: <sha256>
+1. Run:
+   ```bash
+   python3 skills/itsg-33-assess/scripts/merge-state.py \
+     security/.assessment-fragments \
+     security/assessment-state.yaml \
+     security/assessment-state.yaml \
+     <profile>
    ```
-3. **Plausibility check** — if `profile: PBMM` and **all** of the following returned Not
-   Assessable in the merged result:
-   - Every SC (System and Communications Protection) control
-   - Every IA (Identification and Authentication) control
+   (`<profile>` is the profile from Step 1, e.g. `PBMM`.) This script is the sole writer of
+   `security/assessment-state.yaml`, including the plausibility check below — nothing is
+   hand-edited into this file afterward. For any control a fragment marks `"cached": true`, it
+   uses the `finding`/`confidence`/`files_read` already stored in the pre-run
+   `security/assessment-state.yaml` verbatim, discarding whatever the fragment wrote for those
+   fields. For every other control, it takes `finding`/`confidence`/`files_read` directly from
+   the fragment.
 
-   → append a synthetic finding `PLAUSIBILITY-WARNING`:
-     - Finding: Not Assessable
-     - Confidence: "PBMM declared but no encryption, auth, or network config was found.
-       Verify the repo contains the relevant IaC or manifests, or that the system boundary
-       is correctly scoped."
-4. Delete `security/.assessment-fragments/`.
+   If this exits non-zero, its stderr names exactly what is wrong: a control present in more
+   than one fragment, a control marked cached with no prior entry to carry forward, or a
+   fragment/existing-state file that isn't valid JSON. Treat this as a "malformed output" case
+   per Step 4's failure handling — if the cause clearly traces to one family's fragment, retry
+   that family's subagent once and re-run this step; otherwise abort the entire run, report why,
+   and leave `security/.assessment-fragments/` in place for debugging.
+
+2. Confirm every control in `controls.md` appears in the merged `security/assessment-state.yaml`
+   exactly once. (`merge-state.py` only guards against a control appearing in *more than one*
+   fragment; a control missing from *every* fragment is not something the script can detect,
+   since it doesn't know the full control catalogue — check this against `controls.md`
+   directly.) A control missing from all fragments is treated as a subagent failure per Step 4's
+   failure handling: retry that family once, then re-run this step.
+
+3. Delete `security/.assessment-fragments/`.
 
 Completion: `security/assessment-state.yaml` contains an entry for every control in
 `controls.md`; the fragment directory no longer exists.

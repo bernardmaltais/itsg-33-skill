@@ -263,8 +263,10 @@ Once all 9 fragments exist in `security/.assessment-fragments/`:
      <profile>
    ```
    (`<profile>` is the profile from Step 1, e.g. `PBMM`.) This script is the sole writer of
-   `security/assessment-state.yaml`, including the plausibility check below — nothing is
-   hand-edited into this file afterward. For any control a fragment marks `"cached": true`, it
+   `security/assessment-state.yaml`, including the PBMM plausibility check (a synthetic
+   `PLAUSIBILITY-WARNING` control appended when every SC and every IA control comes back Not
+   Assessable) — nothing is hand-edited into this file afterward. For any control a fragment
+   marks `"cached": true`, it
    uses the `finding`/`confidence`/`files_read` already stored in the pre-run
    `security/assessment-state.yaml` verbatim, discarding whatever the fragment wrote for those
    fields. For every other control, it takes `finding`/`confidence`/`files_read` directly from

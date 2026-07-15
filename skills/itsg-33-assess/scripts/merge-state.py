@@ -38,6 +38,7 @@ def load_old_state(path):
             data = json.load(f)
     except json.JSONDecodeError as e:
         fail(f"existing state file {path} is not valid json: {e}")
+        return {}
     return data.get("controls", {}) or {}
 
 
@@ -56,6 +57,7 @@ def load_fragments(fragments_dir):
                 data = json.load(f)
         except json.JSONDecodeError as e:
             fail(f"fragment {path} is not valid json: {e}")
+            continue
 
         family = data.get("family", os.path.splitext(os.path.basename(path))[0])
         for control_id, control in data.get("controls", {}).items():

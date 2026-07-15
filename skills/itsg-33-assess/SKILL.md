@@ -76,7 +76,7 @@ Each subagent's dispatch prompt must include:
 - A pointer to `controls.md`, with an instruction to process only entries whose control ID
   starts with its assigned family prefix
 - A pointer to `evidence-card.md` (the template to use when writing evidence cards)
-- The subagent contract below (steps 4a-4d and 6)
+- The subagent contract below (steps 4a-4e)
 
 **Subagent contract (per family)**
 
@@ -191,7 +191,7 @@ Derive:
 Completion criterion: every control in the assigned family has a finding (Pass / Fail /
 Not Assessable / cached) and a confidence note.
 
-**6. Write evidence card**
+**4e. Write evidence card**
 For each control with a finding (including cached, per 4a's no-rewrite rule), write/update
 `security/evidence/<control-id>.md` using the template at [`evidence-card.md`](evidence-card.md)
 (load via this context pointer). Populate all fields from the finding recorded in 4c/4d.

@@ -32,9 +32,9 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 **Severity:** P1  
 **File patterns:** `**/*.tf`, `**/rbac*.yaml`, `**/role*.yaml`, `**/clusterrole*.yaml`, `**/policy*.yaml`, `**/opa*.yaml`, `**/kyverno*.yaml`  
 **Pass signals:** RBAC roles with explicit `rules` arrays (not wildcard); OPA Gatekeeper or Kyverno policies enforcing access constraints; IAM policies in Terraform with explicit `allow` actions (no `*`).  
-**Fail signals:** Wildcard (`*`) verbs or resources in RBAC Role/ClusterRole rules; IAM policies with `"Action": "*"`; no admission controller policies found.  
+**Fail signals:** A Role or ClusterRole's own `rules:` block, as defined in this repo's manifests, contains wildcard (`*`) verbs or resources; IAM policies with `"Action": "*"`; no admission controller policies found.  
 **Not Assessable:** No RBAC manifests, IAM Terraform resources, or admission controller configs found.
-**Note:** This control is about whether an access enforcement *mechanism* exists and is granular (explicit, non-wildcard rules) — not about whether privilege is minimized overall. A properly-scoped Role can make this control Pass even if a separate, broader grant elsewhere makes AC-6 Fail; the two controls assess different properties of the same RBAC surface and are not required to agree.
+**Note:** This control is about whether an access enforcement *mechanism* exists and is granular (explicit, non-wildcard rules) — not about whether privilege is minimized overall. A properly-scoped Role can make this control Pass even if a separate, broader grant elsewhere makes AC-6 Fail; the two controls assess different properties of the same RBAC surface and are not required to agree. A `ClusterRoleBinding`/`RoleBinding` that grants a broad *built-in* role (e.g. `cluster-admin`) by `roleRef` name is not itself a wildcard `rules:` block — that binding's breadth is AC-6's concern (excessive privilege grant), not evidence against AC-3's mechanism check. Only wildcard verbs/resources actually written in a `rules:` block in this repo count as an AC-3 Fail signal; do not infer wildcard content from a referenced role's well-known name.
 
 ---
 
@@ -53,6 +53,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 **Pass signals:** CODEOWNERS file requiring separate approvers for sensitive paths; GitHub Actions workflows require environment protection rules with required reviewers; IaC pipeline has separate plan and apply stages with approval gate; no single identity has both write and approve permissions.  
 **Fail signals:** Single identity or service account can both propose and approve changes; no CODEOWNERS; workflows deploy without approval gate; cluster-admin used for both operational and deployment tasks.  
 **Not Assessable:** No CI/CD pipeline files or RBAC manifests found.
+**Note:** This control is about whether propose/approve duties are split across distinct roles or identities — not about whether any one role holds broad privilege. A read-only audit role and a separate deploy-approval gate satisfy this control's Pass signals on their own; a different, overly-broad grant elsewhere (AC-6's concern) does not override or negate them. Weigh AC-5 only on its own separation-of-duties evidence, not on RBAC breadth found elsewhere in the same manifests.
 
 ---
 
@@ -246,6 +247,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 **Pass signals:** FIPS 140-2/140-3 validated crypto modules referenced; TLS 1.2 minimum enforced; no deprecated crypto algorithms (MD5, SHA-1, DES, RC4) in config; crypto library versions in dependency manifests are current.  
 **Fail signals:** TLS 1.0 or 1.1 permitted; deprecated algorithms configured; non-FIPS crypto libraries used for sensitive operations.  
 **Not Assessable:** No TLS config or crypto library references found.
+**Note:** A managed service's SKU or plan tier (e.g., a key vault's "Premium" tier, which merely supports HSM-backed or FIPS-validated keys) is not evidence this control passes. Only credit Pass when the configuration itself shows the FIPS-validated module or TLS version is actually selected/enforced — not that the plan tier makes it available. Absent that, treat as Not Assessable rather than inferring compliance from the tier.
 
 ---
 

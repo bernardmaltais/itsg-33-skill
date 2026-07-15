@@ -101,7 +101,10 @@ finding is **Not Assessable**; record `reason: no matching files`; skip to 4d.
 
 **4c. Reason**
 Read the matched files. Apply the control's **Pass signals** and **Fail signals** from
-`controls.md`, using these rules to weigh them:
+`controls.md`, using these rules to weigh them. If the control has a **Note** field in
+`controls.md`, read it before reasoning about the finding — it exists specifically to
+disambiguate this control from a commonly-conflated sibling control, and it takes precedence
+over the general guidance below whenever the two would otherwise conflict.
 
 - **Signal lists are alternatives, not a checklist.** Pass signals and Fail signals are each
   an *OR* list of examples, not a set of requirements that must all be satisfied. One clear,
@@ -184,6 +187,15 @@ Read the matched files. Apply the control's **Pass signals** and **Fail signals*
   control's subject (e.g., a *backup* retention period vs. an *audit log* retention period) is
   only evidence for that control if it is actually the same kind of artifact — check what the
   resource actually stores before citing it.
+- **Don't infer compliance transitively from an adjacent service's tier or feature flag.** A
+  managed service's SKU, plan level, or an available-but-unconfigured feature (e.g., a key
+  vault's "Premium" tier that *supports* HSM-backed or FIPS-validated keys) is not itself
+  evidence that the control's actual mechanism is provisioned or in use for this system. Only
+  credit Pass when the configuration you read shows the mechanism itself is enabled and applied
+  — e.g., a resource or setting that actually selects the FIPS-validated key type, not merely a
+  tier capable of offering it. The same caution applies to any control where the pass signal is
+  a specific configured behavior: a plan that could support it is not the same as evidence it is
+  turned on.
 
 Derive:
 - `finding`: Pass / Fail / Not Assessable

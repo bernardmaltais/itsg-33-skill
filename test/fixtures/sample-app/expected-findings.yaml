@@ -1,0 +1,327 @@
+# Expected findings for the sample-app fixture
+# Used by ticket #12 (verify itsg-33-assess) to assert correct skill output.
+#
+# Each entry documents:
+#   finding: Pass | Fail | Not Assessable
+#   reason:  plain-English explanation matching controls.md signal definitions
+#   evidence: which fixture file(s) drive this finding
+
+controls:
+
+  # ── AC — Access Control ──────────────────────────────────────────────────
+
+  AC-2:
+    finding: Pass
+    reason: Service account explicitly defined with automountServiceAccountToken false; workload identity annotation present
+    evidence: k8s/rbac.yaml, k8s/deployment.yaml
+
+  AC-3:
+    finding: Pass
+    reason: Namespace-scoped Role with explicit verb list (get, list, watch) present; no wildcard verbs
+    evidence: k8s/rbac.yaml
+
+  AC-4:
+    finding: Pass
+    reason: Default-deny NetworkPolicy present in sample-app namespace; ingress restricted to gateway namespace only
+    evidence: k8s/deployment.yaml
+
+  AC-5:
+    finding: Pass
+    reason: Separate audit-reader role and service account; deploy pipeline requires environment approval gate
+    evidence: k8s/rbac.yaml, .github/workflows/ci.yaml
+
+  AC-6:
+    finding: Fail
+    reason: ClusterRoleBinding granting cluster-admin to sample-app service account; Terraform IAM assigns Contributor (overly broad) role
+    evidence: k8s/rbac.yaml, terraform/main.tf
+
+  AC-7:
+    finding: Not Assessable
+    reason: No rate limiting config on auth endpoints found; no IdP Terraform or middleware config in fixture
+    evidence: none
+
+  AC-8:
+    finding: Not Assessable
+    reason: No login page, IdP config, or system use notification config found
+    evidence: none
+
+  AC-11:
+    finding: Not Assessable
+    reason: No session timeout config, IdP Terraform, or app session management config found
+    evidence: none
+
+  AC-12:
+    finding: Not Assessable
+    reason: No session revocation or token expiry config found
+    evidence: none
+
+  AC-17:
+    finding: Not Assessable
+    reason: No bastion, VPN, or remote access Terraform config found
+    evidence: none
+
+  AC-19:
+    finding: Not Assessable
+    reason: No conditional access or MDM Terraform config found
+    evidence: none
+
+  # ── AU — Audit and Accountability ────────────────────────────────────────
+
+  AU-2:
+    finding: Fail
+    reason: No audit logging configuration found — no K8s audit policy, no cloud audit log Terraform resource, no structured security event logging in app code
+    evidence: none
+
+  AU-3:
+    finding: Fail
+    reason: No log format or audit record field configuration found; app logging not configured
+    evidence: none
+
+  AU-4:
+    finding: Not Assessable
+    reason: No log storage or log analytics workspace Terraform found
+    evidence: none
+
+  AU-5:
+    finding: Not Assessable
+    reason: No alerting config for log pipeline failures found
+    evidence: none
+
+  AU-8:
+    finding: Not Assessable
+    reason: No NTP or clock sync config found
+    evidence: none
+
+  AU-9:
+    finding: Not Assessable
+    reason: No log storage RBAC or immutability policy Terraform found
+    evidence: none
+
+  AU-11:
+    finding: Not Assessable
+    reason: No log retention policy found
+    evidence: none
+
+  AU-12:
+    finding: Fail
+    reason: No audit logging enabled at platform or application level; CI pipeline has no audit artefact logging
+    evidence: none
+
+  # ── IA — Identification and Authentication ────────────────────────────────
+
+  IA-2:
+    finding: Not Assessable
+    reason: No IdP Terraform, OIDC config, or MFA enforcement config found
+    evidence: none
+
+  IA-3:
+    finding: Not Assessable
+    reason: No service mesh mTLS or PKI config found
+    evidence: none
+
+  IA-4:
+    finding: Pass
+    reason: Service account follows named convention (sample-app); purpose-specific with workload identity annotation; automountServiceAccountToken disabled
+    evidence: k8s/rbac.yaml, k8s/deployment.yaml
+
+  IA-5:
+    finding: Pass
+    reason: DB password sourced from Kubernetes Secret via secretKeyRef (no hardcoded credentials); Key Vault provisioned in Terraform for secrets management
+    evidence: k8s/deployment.yaml, terraform/main.tf
+
+  IA-6:
+    finding: Not Assessable
+    reason: No login UI or auth form files found
+    evidence: none
+
+  IA-7:
+    finding: Not Assessable
+    reason: No TLS or cryptographic module config found
+    evidence: none
+
+  IA-8:
+    finding: Not Assessable
+    reason: No external user auth config found
+    evidence: none
+
+  IA-9:
+    finding: Not Assessable
+    reason: No service mesh or API gateway auth config found
+    evidence: none
+
+  # ── SC — System and Communications Protection ─────────────────────────────
+
+  SC-2:
+    finding: Pass
+    reason: Dedicated sample-app namespace defined; NetworkPolicy enforces namespace isolation
+    evidence: k8s/deployment.yaml
+
+  SC-5:
+    finding: Pass
+    reason: ResourceQuota limits CPU and memory per namespace; deployment has resource requests and limits
+    evidence: k8s/deployment.yaml
+
+  SC-7:
+    finding: Pass
+    reason: Default-deny NetworkPolicy in sample-app namespace; Azure NSG with explicit allow-HTTPS and deny-all rules; no 0.0.0.0/0 on non-HTTPS ports
+    evidence: k8s/deployment.yaml, terraform/main.tf
+
+  SC-8:
+    finding: Not Assessable
+    reason: No TLS ingress, cert-manager, or service mesh TLS config found
+    evidence: none
+
+  SC-12:
+    finding: Pass
+    reason: Azure Key Vault provisioned with premium SKU, purge protection enabled, network ACLs default-deny; secrets managed via Key Vault
+    evidence: terraform/main.tf
+
+  SC-13:
+    finding: Not Assessable
+    reason: No explicit cryptographic algorithm config found
+    evidence: none
+
+  SC-17:
+    finding: Not Assessable
+    reason: No cert-manager or PKI Terraform found
+    evidence: none
+
+  SC-18:
+    finding: Not Assessable
+    reason: No web server config or CSP header configuration found
+    evidence: none
+
+  SC-23:
+    finding: Not Assessable
+    reason: No CSRF protection or session cookie config found
+    evidence: none
+
+  SC-28:
+    finding: Fail
+    reason: Storage account has no encryption config (no customer_managed_key block, no infrastructure_encryption_enabled); no encryption-at-rest setting on any Terraform storage resource
+    evidence: terraform/main.tf
+
+  SC-39:
+    finding: Pass
+    reason: Container securityContext sets runAsNonRoot true, readOnlyRootFilesystem true, allowPrivilegeEscalation false, capabilities drop ALL; no privileged containers
+    evidence: k8s/deployment.yaml
+
+  # ── CM — Configuration Management ────────────────────────────────────────
+
+  CM-2:
+    finding: Pass
+    reason: All infrastructure defined in Terraform with pinned provider versions; Helm chart uses pinned image tag (not latest)
+    evidence: terraform/main.tf, k8s/deployment.yaml
+
+  CM-3:
+    finding: Pass
+    reason: CI pipeline enforced on all PRs; deploy job requires environment approval (production environment gate)
+    evidence: .github/workflows/ci.yaml
+
+  CM-5:
+    finding: Not Assessable
+    reason: No CODEOWNERS file found
+    evidence: none
+
+  CM-6:
+    finding: Pass
+    reason: No debug mode, no hostNetwork, no hostPID; resource quotas defined; securityContext hardening applied
+    evidence: k8s/deployment.yaml
+
+  CM-7:
+    finding: Pass
+    reason: Minimal python:3.11-slim base image; non-root user; only required port exposed; capabilities dropped
+    evidence: Dockerfile, k8s/deployment.yaml
+
+  CM-8:
+    finding: Pass
+    reason: requirements.txt with pinned versions present; dependabot configured for automated updates
+    evidence: requirements.txt, .github/dependabot.yml
+
+  CM-10:
+    finding: Not Assessable
+    reason: No license scanning config found in CI
+    evidence: none
+
+  CM-11:
+    finding: Not Assessable
+    reason: No admission controller image policy found
+    evidence: none
+
+  # ── SI — System and Information Integrity ─────────────────────────────────
+
+  SI-2:
+    finding: Pass
+    reason: Dependabot configured for weekly Python dependency updates; Trivy dependency scan in CI with exit-code 1 on HIGH/CRITICAL
+    evidence: .github/dependabot.yml, .github/workflows/ci.yaml
+
+  SI-3:
+    finding: Pass
+    reason: Trivy container image scan in CI pipeline; exits non-zero on HIGH/CRITICAL CVEs
+    evidence: .github/workflows/ci.yaml
+
+  SI-4:
+    finding: Not Assessable
+    reason: No Prometheus rules, Grafana dashboards, or alerting config found
+    evidence: none
+
+  SI-7:
+    finding: Not Assessable
+    reason: No image signing (Cosign) or admission controller signature verification found
+    evidence: none
+
+  SI-10:
+    finding: Fail
+    reason: SQL query in /items endpoint constructed via string concatenation with unsanitized user input — SQL injection vulnerability; no input schema validation on request parameters
+    evidence: app/main.py
+
+  SI-11:
+    finding: Pass
+    reason: Exception handler returns generic "internal server error" message; no stack traces or internal details in HTTP responses
+    evidence: app/main.py
+
+  SI-16:
+    finding: Pass
+    reason: Memory limits set on container; readOnlyRootFilesystem true; capabilities dropped; no SYS_PTRACE
+    evidence: k8s/deployment.yaml
+
+  # ── SA — System and Services Acquisition (partial) ────────────────────────
+
+  SA-10:
+    finding: Not Assessable
+    reason: No .gitignore or pre-commit config found in fixture
+    evidence: none
+
+  SA-11:
+    finding: Pass
+    reason: Semgrep SAST configured in CI; Trivy dependency scan present; security scans run on every PR
+    evidence: .github/workflows/ci.yaml
+
+  SA-15:
+    finding: Pass
+    reason: CI pipeline enforced on all PRs and pushes to main; lint job defined; pinned action versions
+    evidence: .github/workflows/ci.yaml
+
+  SA-22:
+    finding: Pass
+    reason: Dependabot monitors for EOL dependencies; pinned Python 3.11 (supported); pinned flask 3.0.0 and gunicorn 21.2.0 (current)
+    evidence: requirements.txt, .github/dependabot.yml
+
+  # ── CP — Contingency Planning (partial) ──────────────────────────────────
+
+  CP-9:
+    finding: Pass
+    reason: Recovery Services Vault with soft-delete and backup policy defined in Terraform; 30-day retention; GRS replication on storage account
+    evidence: terraform/main.tf
+
+  CP-10:
+    finding: Not Assessable
+    reason: No DR failover or geo-redundant failover group Terraform found
+    evidence: none
+
+  # ── RA — Risk Assessment (partial) ───────────────────────────────────────
+
+  RA-5:
+    finding: Pass
+    reason: Trivy scans both filesystem (dependencies) and container image in CI; exits non-zero on HIGH/CRITICAL; runs on every PR
+    evidence: .github/workflows/ci.yaml

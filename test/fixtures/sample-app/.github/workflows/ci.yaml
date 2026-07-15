@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# SA-11 PASS: security scanning in CI
+# SA-15 PASS: pipeline enforced on all PRs
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install flake8
+      - run: flake8 app/
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt pytest pytest-cov
+      - run: pytest tests/ --cov=app --cov-report=xml
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      # SA-11 PASS: SAST via Semgrep
+      - name: Semgrep SAST
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/python
+            p/owasp-top-ten
+
+      # SI-2 / RA-5 PASS: dependency vulnerability scan
+      - name: Trivy dependency scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+  container-scan:
+    name: Container Scan
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t sample-app:${{ github.sha }} .
+
+      # SI-3 PASS: container image scanning
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: sample-app:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, container-scan]
+    if: github.ref == 'refs/heads/main'
+    environment: production   # CM-3 PASS: requires environment approval
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to AKS
+        run: echo "deploy step placeholder"

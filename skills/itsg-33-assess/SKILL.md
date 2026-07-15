@@ -62,7 +62,7 @@ Completion: list of detected signal families recorded (e.g., `[terraform, kubern
 
 ### Step 3 — Load control catalogue
 
-Load [`controls.md`](controls.md) via this context pointer.
+Load [`controls.md`](controls.md) via this context pointer. Completion: all control entries are loaded and available for Step 4.
 
 ### Step 4 — Assess each control
 
@@ -75,21 +75,27 @@ match → mark this control `cached`, carry the prior finding forward, skip to n
 
 **4b. Read relevant files**
 Glob the control's **File patterns** against the repo. If no files match any pattern →
-finding is **Not Assessable**; record `reason: no matching files`; skip to 4e.
+finding is **Not Assessable**; record `reason: no matching files`; skip to 4d.
 
 **4c. Reason**
 Read the matched files. Apply the control's **Pass signals** and **Fail signals** from
-`controls.md`. Record:
+`controls.md`. Derive:
 - `finding`: Pass / Fail / Not Assessable
 - `confidence`: plain-English note explaining what was found or not found
-- `files_read`: list of relative paths read
-- `file_hashes`: SHA-256 of each file's content
+- `risk_summary`: one-to-two sentence attacker-perspective statement (from controls.md risk context)
+- `implementation_approach`: narrative of how the system implements (or fails to implement) the control, citing specific files and config constructs
+- `evidence_artefacts`: bulleted list of relative file paths with a note on what each demonstrates
+- `client_responsibility`: what application teams must do to maintain their side of this control
+- `files_read`: map of `<relative path>` → SHA-256 of file content (used for cache check in 4a and stored in Step 5)
 
 **4d. Record finding**
 Completion criterion: every control in `controls.md` has a finding (Pass / Fail /
 Not Assessable / cached) and a confidence note.
 
-**4e. Plausibility check** *(after the loop completes)*
+---
+*(End of per-control loop. The following check runs once after all controls are assessed.)*
+
+**Plausibility check**
 If `profile: PBMM` and **all** of the following returned Not Assessable:
 - Every SC (System and Communications Protection) control
 - Every IA (Identification and Authentication) control
@@ -108,7 +114,7 @@ controls:
     finding: <Pass | Fail | Not Assessable>
     confidence: <string>
     files_read:
-      - <relative path>: <sha256>
+      <relative path>: <sha256>
 ```
 Completion: file written; every assessed (non-cached) control has an updated entry.
 
@@ -166,9 +172,9 @@ Write/overwrite `security/assessment-report.md`. Structure:
 
 ## POA&M
 
-| Control ID | Finding | Severity | Recommended Action | Owner | Target Date | Remediation Ticket |
-|------------|---------|----------|--------------------|-------|-------------|--------------------|
-| ...        | Fail    | P1       | ...                |       |             |                    |
+| Control ID | Finding | Confidence | Severity | Recommended Action | Owner | Target Date | Remediation Ticket |
+|------------|---------|------------|----------|--------------------|-------|-------------|--------------------|
+| ...        | Fail    | ...        | P1       | ...                |       |             |                    |
 
 ## Evidence Cards Index
 

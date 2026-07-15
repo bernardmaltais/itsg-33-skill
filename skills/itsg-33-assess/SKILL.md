@@ -92,8 +92,11 @@ always uses the values already stored there, discarding whatever you write for t
 on a cached control, so you do not need to reproduce them precisely; carrying forward your
 best-available copy is enough. The remaining fragment fields (`risk_summary`,
 `implementation_approach`, `evidence_artefacts`, `client_responsibility`) are never read for a
-cached control either, since its evidence card is not rewritten — a short placeholder such as
-`"(cached — see evidence card)"` is fine. Skip to next control.
+cached control either, since its evidence card is not rewritten — but `write-fragment.py` still
+requires every field to be present, so do not omit them. Use a short placeholder string such as
+`"(cached — see evidence card)"` for the three string fields, and a placeholder list such as
+`["(cached)"]` for `evidence_artefacts` (any list is accepted; an empty list `[]` also works).
+Skip to next control.
 
 **4b. Read relevant files**
 Glob the control's **File patterns** against the repo. If no files match any pattern →

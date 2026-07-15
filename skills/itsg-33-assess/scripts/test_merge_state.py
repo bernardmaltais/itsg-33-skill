@@ -76,6 +76,31 @@ class MergeStateTest(unittest.TestCase):
         self.assertIn("sc-2", result.stderr.lower())
         self.assertIn("cached", result.stderr.lower())
 
+    def test_cached_control_with_incomplete_old_entry_fails_cleanly(self):
+        self.old_state_path.write_text(json.dumps({
+            "last_run": "2026-01-01T00:00:00+00:00",
+            "controls": {
+                "SC-2": {"finding": "Pass", "files_read": {}},
+            },
+        }))
+        self.write_fragment("SC", {
+            "SC-2": {"finding": "Pass", "confidence": "whatever",
+                      "files_read": {}, "cached": True},
+        })
+        result = self.run_merge()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("sc-2", result.stderr.lower())
+        self.assertIn("missing", result.stderr.lower())
+
+    def test_fresh_control_with_missing_field_fails_cleanly(self):
+        self.write_fragment("AU", {
+            "AU-2": {"finding": "Fail", "files_read": {}},
+        })
+        result = self.run_merge()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("au-2", result.stderr.lower())
+        self.assertIn("missing", result.stderr.lower())
+
     def test_duplicate_control_across_fragments_fails(self):
         self.write_fragment("AU", {
             "AU-2": {"finding": "Fail", "confidence": "x", "files_read": {}},

@@ -73,8 +73,16 @@ def resolve_control(control_id, control, old_controls):
         old = old_controls.get(control_id)
         if old is None:
             fail(f"{control_id}: marked cached but has no prior entry in the existing state file")
-        return {field: old[field] for field in REQUIRED_STATE_FIELDS}
-    return {field: control[field] for field in REQUIRED_STATE_FIELDS}
+            return None
+        source, source_desc = old, "existing state file"
+    else:
+        source, source_desc = control, "fragment"
+
+    missing = [field for field in REQUIRED_STATE_FIELDS if field not in source]
+    if missing:
+        fail(f"{control_id}: {source_desc} entry is missing required field(s): {missing}")
+        return None
+    return {field: source[field] for field in REQUIRED_STATE_FIELDS}
 
 
 def apply_plausibility_check(controls, profile):

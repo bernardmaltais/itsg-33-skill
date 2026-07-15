@@ -85,8 +85,14 @@ For each control in the assigned family, in order:
 **4a. Cache check**
 Read `security/assessment-state.yaml`. For each file listed under this control's
 `files_read`, hash the current content and compare to the stored hash. If all hashes
-match → mark this control `cached`, carry the prior finding forward, and do not rewrite
-its evidence card. Skip to next control.
+match → mark this control `cached` and do not rewrite its evidence card. Copy `finding`,
+`confidence`, and `files_read` **verbatim, character-for-character**, from
+`assessment-state.yaml` into this control's fragment entry — do not reword, summarize, or
+regenerate `confidence` from the evidence card or from re-reading the source files, even if
+you can produce a phrasing you think reads better. For the fragment fields
+`assessment-state.yaml` does not store (`risk_summary`, `implementation_approach`,
+`evidence_artefacts`, `client_responsibility`), copy them verbatim from the existing
+`security/evidence/<control-id>.md` instead — same rule, no rewording. Skip to next control.
 
 **4b. Read relevant files**
 Glob the control's **File patterns** against the repo. If no files match any pattern →

@@ -61,33 +61,70 @@ whose relevant files changed; reuse cached findings for the rest.
 Read `security/itsg33.yaml`. Accept `--profile <value>` argument as a run-time override
 of `profile`. Completion: active profile and tracker mode are known.
 
-### Step 2 — Load control catalogue
+### Step 2 — Load control catalogue and role taxonomy
 
-Load [`controls.md`](controls.md) via this context pointer, including its **Common Pattern
-Families** section. That section is the single source of truth for every tool/language
-glob this skill knows about — Step 3's survey and Step 4b's fallback are both driven from
-it directly rather than from a separate list, so there is nothing else to keep in sync when
-a new tool needs support. Completion: all control entries and the family definitions are
-loaded and available for Steps 3 and 4.
+Load [`controls.md`](controls.md) via this context pointer, including its **Common Content
+Roles** section. That section is the single source of truth for every role name this skill
+knows about — Step 3's classification pass and Step 4b's lookup are both driven from it
+directly, so there is nothing else to keep in sync when a new tool or convention needs
+support. Completion: all control entries and the role taxonomy (name + description per role)
+are loaded and available for Steps 3 and 4.
 
-### Step 3 — Fingerprint tech stack
+### Step 3 — Classify tracked files by role
 
-For each named family in controls.md's Common Pattern Families (`{IaC}`, `{CI/CD}`,
-`{App source}`, `{Dependency manifest}`, `{Vuln/SAST scanning}`, `{Service mesh}`,
-`{Admission controller}`, `{Cert management}`, `{Observability}`, `{Image signing}`,
-`{Log shipping}`, `{IdP}`, `{Reverse proxy}`, `{Time sync}`), glob its pattern set against
-the repo and record whether it has at least one match. Also detect the Kubernetes-manifest
-heuristic (`**/*.yaml`/`**/*.yml` files containing both `apiVersion:` and `kind:`), since
-several controls reference K8s manifests directly rather than through a family token.
+1. Enumerate the repo's tracked files once with `git ls-files`. Matching against tracked
+   files rather than a raw filesystem walk means anything `.gitignore` excludes — vendored
+   dependencies, build output, `node_modules/`, generated artefacts — never enters the
+   candidate set at all.
+2. Read the persistent classification cache, `security/file-roles.yaml` (JSON content
+   despite the `.yaml` name, same convention `assessment-state.yaml` already uses) — a map
+   of `<path>` → `{roles: [...], content_hash: <sha256>}` from the previous run. Absent on a
+   repo's first run (cold start): treat as empty.
+3. Diff: a tracked file with no cache entry, or whose current content hash doesn't match the
+   cached one, needs (re)classification this run. Everything else reuses its cached roles
+   untouched — this is what keeps repeat runs cheap.
+4. If any paths need classification, dispatch **one classification subagent** (fresh context,
+   not per-family) with the full role taxonomy (name + description each, from Step 2) and the
+   list of paths needing classification. It assigns each path zero or more role names in a
+   single reasoning pass. Multi-label is expected and normal (e.g. `Chart.yaml` is both `iac`
+   and `dependency-manifest`).
+   - **Content-peek escalation:** for any path the subagent can't confidently resolve from
+     path/extension alone, it reads that specific file before finalizing a role. Most paths
+     resolve from name alone and are never opened.
+   - **Novel roles:** the taxonomy is open-ended. If a file doesn't fit any described role,
+     the subagent records a new role name as-is rather than forcing it into an existing
+     bucket or dropping it.
+   - The subagent writes its results as JSON to a scratch input file
+     `security/.assessment-fragments/file-roles.input.json`:
+     ```json
+     {
+       "classifications": {
+         "<path>": {"roles": ["<role>", "..."], "content_hash": "<sha256 of current content>"}
+       }
+     }
+     ```
+     Then run:
+     ```bash
+     python3 skills/itsg-33-assess/scripts/merge-file-roles.py \
+       security/.assessment-fragments/file-roles.input.json \
+       security/file-roles.yaml \
+       security/file-roles.yaml
+     ```
+     If this exits non-zero, its stderr names exactly what is wrong (missing field, invalid
+     role, malformed JSON, invalid `content_hash`). Fix the input file and re-run — up to 2
+     attempts. If it still fails after 2 attempts, this counts as the "malformed output" case
+     in the failure handling below.
+5. If no paths need classification (every tracked file already has a current cache entry),
+   skip dispatch entirely — there is nothing to merge.
 
-Also record any other distinct top-level file extensions present in the repo that aren't
-covered by any family above (a broad `find . -type f | sed 's/.*\.//' | sort -u`-style
-listing is sufficient). This catches a stack none of the families anticipate at all, so
-Step 4b's fallback has something to check against for a control whose glob patterns come
-up empty.
+**Failure handling:** mirrors Step 4's family-subagent pattern. If the classification
+subagent errors or exhausts its 2 `merge-file-roles.py` retry attempts without a clean exit,
+retry the subagent once. If the retry also fails, abort the entire run: report why, leave
+`security/file-roles.yaml` and `security/assessment-state.yaml` untouched, and leave
+`security/.assessment-fragments/` in place for debugging. Do not proceed to Step 4.
 
-Completion: list of matched family names recorded (e.g., `[IaC, CI/CD, App source]`), the
-K8s-manifest signal, and the catch-all extension list.
+Completion: `security/file-roles.yaml` has a current entry (matching content hash) for every
+tracked file — reused from cache or freshly classified this run.
 
 ### Step 4 — Dispatch family subagents
 
@@ -97,7 +134,7 @@ family gets a subagent every run, even if none of its controls changed since the
 
 Each subagent's dispatch prompt must include:
 - The active `profile`, `system_name`, `system_boundary`, and tracker mode (from Step 1)
-- The detected family/signal list from Step 3
+- A pointer to `security/file-roles.yaml` (the role classification cache from Step 3)
 - A pointer to `controls.md`, with an instruction to process only entries whose control ID
   starts with its assigned family prefix
 - A pointer to `evidence-card.md` (the template to use when writing evidence cards)
@@ -125,43 +162,15 @@ requires every field to be present, so do not omit them. Use a short placeholder
 Skip to next control.
 
 **4b. Read relevant files**
-Glob the control's **File patterns** against the repo, expanding any `{Name}` token per
-`controls.md`'s Common Pattern Families section. If at least one file matches, read the
-matched files and proceed to 4c.
+Look up this control's **File patterns (roles)** line in `controls.md`. Read
+`security/file-roles.yaml` and take every path whose `roles` list intersects this control's
+role names. If at least one path matches, read the matched files and proceed to 4c. There is
+no separate fallback step here — Step 3's content-peek escalation already resolved every
+ambiguous file proactively during classification, for every control, not reactively for a
+pre-selected handful of domains after a glob came up empty.
 
-If no files match, fall back through two further layers before concluding Not Assessable —
-each one is a targeted glob or grep, never a free-form repo-wide read, so the fallback stays
-cheap even when it fires:
-
-1. **Cross-family filename fallback.** Check the Step 3 survey for a family (or the K8s
-   heuristic, or a catch-all extension) that has a match in the repo but isn't already
-   named on this control's File patterns line — e.g., the control's line only lists `{IaC}`
-   but Step 3 found `{Service mesh}` files, or the survey shows a source language outside
-   `{App source}`'s list. If such a signal exists, glob for that family's patterns (or, for
-   a catch-all extension, `**/*.<ext>`) and read the matches, then proceed to 4c.
-
-2. **Content-marker fallback.** Some roles aren't identifiable by filename convention at
-   all — a team may name a service-mesh policy file anything and it will still declare its
-   role via its Kubernetes `kind:`. If layer 1 also found nothing, grep YAML files already
-   known to exist in the repo (from the Step 3 K8s-manifest heuristic) for a content marker
-   relevant to this control's domain:
-
-   | Domain | Content marker (K8s `kind:` or key) |
-   |---|---|
-   | Service mesh | `PeerAuthentication`, `DestinationRule`, `ServiceProfile` |
-   | Admission control | `ClusterPolicy`, `ValidatingWebhookConfiguration`, `ConstraintTemplate` |
-   | Certificate management | `Certificate`, `Issuer`, `ClusterIssuer` |
-   | Observability | `PrometheusRule`, `ServiceMonitor`, `Dashboard` |
-   | Image signing | `ClusterImagePolicy`, or a `cosign.pub`/`cosign.key` file present |
-   | Identity provider | `OIDCConfig`, or `oidc`/`saml`/`auth` keys in app config |
-
-   Read whichever files matched, then proceed to 4c. This is the mechanism for "repo
-   content drives pattern discovery, not a hardcoded product name": the marker is a
-   Kubernetes API convention, not a specific vendor, so it generalizes to any tool that
-   emits that `kind:` — including ones invented after this skill was written.
-
-Only if both fallback layers turn up nothing → finding is **Not Assessable**; record
-`reason: no matching files (including tech-stack fallback)`; skip to 4d.
+If no path in `security/file-roles.yaml` carries any of this control's roles → finding is
+**Not Assessable**; record `reason: no files classified with this control's roles`; skip to 4d.
 
 **4c. Reason**
 Read the matched files. Apply the control's **Pass signals** and **Fail signals** from
@@ -326,7 +335,10 @@ Completion: every Fail finding has a gap issue, work item, or gap file; no dupli
 Write/overwrite `security/assessment-report.md` following the structure at
 [`report-template.md`](report-template.md) (load via this context pointer). The POA&M's
 `Severity` column comes from each Fail control's evidence card `**Severity:**` line (Step 4c),
-same source as Step 6's gap-issue tags.
+same source as Step 6's gap-issue tags. Populate **Detected Technology Without a Mapped
+Control** from `security/file-roles.yaml` (Step 3): any role present there that no control's
+File patterns (roles) line in `controls.md` references. This is informational only — it never
+feeds Pass/Fail logic. Omit the section if there are none.
 
 Completion: file written; POA&M includes one row per Fail finding; evidence cards index
 links to every file in `security/evidence/`.
@@ -341,6 +353,7 @@ Include:
 - Control family breakdown as a simple table
 - Top 3 gaps highlighted
 - POA&M table with sortable columns (use plain `<table>` with `<th>` — no JS required)
+- Detected Technology Without a Mapped Control table (omit if empty), same data as Step 7
 - Evidence cards index as a linked list (links to the `.md` files)
 
 Completion: `security/assessment-report.html` exists; opening it in a browser renders

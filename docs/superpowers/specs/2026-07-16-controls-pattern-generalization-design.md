@@ -42,8 +42,10 @@ Every control whose **File patterns** line currently contains bare `**/*.tf` rep
 with `{IaC}`, keeping any control-specific extras (e.g. `**/rbac*.yaml`, `**/bastion*.tf`)
 as literal patterns alongside it — those aren't shared across controls, so they stay
 inline. Every control whose patterns include `.github/workflows/*.yaml` replaces it with
-`{CI/CD}`. SI-10, SI-11, and SI-16 replace their six-language enumeration with
-`{App source}`.
+`{CI/CD}`. SI-10 and SI-11 — the two controls whose patterns enumerate source languages
+directly — replace that enumeration with `{App source}`. (SI-16, Memory Protection, has no
+language enumeration in its current patterns — only `Dockerfile`/`*.yaml`/`*.tf` — so it is
+unaffected by this change.)
 
 This keeps individual control entries concrete and human-readable (a family name plus
 whatever's control-specific), while making the enumeration maintainable in one place: adding

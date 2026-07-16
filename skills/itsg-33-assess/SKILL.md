@@ -61,26 +61,33 @@ whose relevant files changed; reuse cached findings for the rest.
 Read `security/itsg33.yaml`. Accept `--profile <value>` argument as a run-time override
 of `profile`. Completion: active profile and tracker mode are known.
 
-### Step 2 — Fingerprint tech stack
+### Step 2 — Load control catalogue
 
-Detect which file patterns are present in the repo:
+Load [`controls.md`](controls.md) via this context pointer, including its **Common Pattern
+Families** section. That section is the single source of truth for every tool/language
+glob this skill knows about — Step 3's survey and Step 4b's fallback are both driven from
+it directly rather than from a separate list, so there is nothing else to keep in sync when
+a new tool needs support. Completion: all control entries and the family definitions are
+loaded and available for Steps 3 and 4.
 
-| Signal | Pattern |
-|--------|---------|
-| Terraform | `**/*.tf` |
-| Kubernetes manifests | `**/*.yaml`, `**/*.yml` (k8s heuristic: contains `apiVersion:` and `kind:`) |
-| Helm values | `**/values*.yaml` |
-| Dockerfile | `**/Dockerfile*` |
-| GitHub Actions | `.github/workflows/*.yaml` |
-| Go module | `go.mod` |
-| Node | `package.json` |
-| Python | `requirements*.txt`, `pyproject.toml` |
+### Step 3 — Fingerprint tech stack
 
-Completion: list of detected signal families recorded (e.g., `[terraform, kubernetes, github-actions]`).
+For each named family in controls.md's Common Pattern Families (`{IaC}`, `{CI/CD}`,
+`{App source}`, `{Dependency manifest}`, `{Vuln/SAST scanning}`, `{Service mesh}`,
+`{Admission controller}`, `{Cert management}`, `{Observability}`, `{Image signing}`,
+`{Log shipping}`, `{IdP}`, `{Reverse proxy}`, `{Time sync}`), glob its pattern set against
+the repo and record whether it has at least one match. Also detect the Kubernetes-manifest
+heuristic (`**/*.yaml`/`**/*.yml` files containing both `apiVersion:` and `kind:`), since
+several controls reference K8s manifests directly rather than through a family token.
 
-### Step 3 — Load control catalogue
+Also record any other distinct top-level file extensions present in the repo that aren't
+covered by any family above (a broad `find . -type f | sed 's/.*\.//' | sort -u`-style
+listing is sufficient). This catches a stack none of the families anticipate at all, so
+Step 4b's fallback has something to check against for a control whose glob patterns come
+up empty.
 
-Load [`controls.md`](controls.md) via this context pointer. Completion: all control entries are loaded and available for Step 4.
+Completion: list of matched family names recorded (e.g., `[IaC, CI/CD, App source]`), the
+K8s-manifest signal, and the catch-all extension list.
 
 ### Step 4 — Dispatch family subagents
 
@@ -90,7 +97,7 @@ family gets a subagent every run, even if none of its controls changed since the
 
 Each subagent's dispatch prompt must include:
 - The active `profile`, `system_name`, `system_boundary`, and tracker mode (from Step 1)
-- The detected signal list from Step 2
+- The detected family/signal list from Step 3
 - A pointer to `controls.md`, with an instruction to process only entries whose control ID
   starts with its assigned family prefix
 - A pointer to `evidence-card.md` (the template to use when writing evidence cards)
@@ -118,8 +125,43 @@ requires every field to be present, so do not omit them. Use a short placeholder
 Skip to next control.
 
 **4b. Read relevant files**
-Glob the control's **File patterns** against the repo. If no files match any pattern →
-finding is **Not Assessable**; record `reason: no matching files`; skip to 4d.
+Glob the control's **File patterns** against the repo, expanding any `{Name}` token per
+`controls.md`'s Common Pattern Families section. If at least one file matches, read the
+matched files and proceed to 4c.
+
+If no files match, fall back through two further layers before concluding Not Assessable —
+each one is a targeted glob or grep, never a free-form repo-wide read, so the fallback stays
+cheap even when it fires:
+
+1. **Cross-family filename fallback.** Check the Step 3 survey for a family (or the K8s
+   heuristic, or a catch-all extension) that has a match in the repo but isn't already
+   named on this control's File patterns line — e.g., the control's line only lists `{IaC}`
+   but Step 3 found `{Service mesh}` files, or the survey shows a source language outside
+   `{App source}`'s list. If such a signal exists, glob for that family's patterns (or, for
+   a catch-all extension, `**/*.<ext>`) and read the matches, then proceed to 4c.
+
+2. **Content-marker fallback.** Some roles aren't identifiable by filename convention at
+   all — a team may name a service-mesh policy file anything and it will still declare its
+   role via its Kubernetes `kind:`. If layer 1 also found nothing, grep YAML files already
+   known to exist in the repo (from the Step 3 K8s-manifest heuristic) for a content marker
+   relevant to this control's domain:
+
+   | Domain | Content marker (K8s `kind:` or key) |
+   |---|---|
+   | Service mesh | `PeerAuthentication`, `DestinationRule`, `ServiceProfile` |
+   | Admission control | `ClusterPolicy`, `ValidatingWebhookConfiguration`, `ConstraintTemplate` |
+   | Certificate management | `Certificate`, `Issuer`, `ClusterIssuer` |
+   | Observability | `PrometheusRule`, `ServiceMonitor`, `Dashboard` |
+   | Image signing | `ClusterImagePolicy`, or a `cosign.pub`/`cosign.key` file present |
+   | Identity provider | `OIDCConfig`, or `oidc`/`saml`/`auth` keys in app config |
+
+   Read whichever files matched, then proceed to 4c. This is the mechanism for "repo
+   content drives pattern discovery, not a hardcoded product name": the marker is a
+   Kubernetes API convention, not a specific vendor, so it generalizes to any tool that
+   emits that `kind:` — including ones invented after this skill was written.
+
+Only if both fallback layers turn up nothing → finding is **Not Assessable**; record
+`reason: no matching files (including tech-stack fallback)`; skip to 4d.
 
 **4c. Reason**
 Read the matched files. Apply the control's **Pass signals** and **Fail signals** from

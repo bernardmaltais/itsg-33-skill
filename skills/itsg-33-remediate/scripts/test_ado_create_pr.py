@@ -94,6 +94,23 @@ class AdoCreatePrTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("body file not found", result.stderr)
 
+    def test_empty_default_branch_fails(self):
+        self._stub_az(
+            "#!/usr/bin/env bash\n"
+            'if [[ "$1" == "extension" && "$2" == "list" ]]; then\n'
+            '  echo "azure-devops"\n'
+            "  exit 0\n"
+            "fi\n"
+            'if [[ "$1" == "repos" && "$2" == "show" ]]; then\n'
+            '  echo ""\n'
+            "  exit 0\n"
+            "fi\n"
+            "exit 1\n"
+        )
+        result = self._run(self._common_args())
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("could not determine default branch", result.stderr)
+
     def test_az_pr_create_failure_surfaces_reason(self):
         self._stub_az(
             "#!/usr/bin/env bash\n"

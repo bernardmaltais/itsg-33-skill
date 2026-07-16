@@ -35,6 +35,10 @@ if [[ -z "$TARGET_BRANCH" ]]; then
     exit 1
   fi
   TARGET_BRANCH="${TARGET_BRANCH#refs/heads/}"
+  if [[ -z "$TARGET_BRANCH" ]]; then
+    echo "ado-create-pr: could not determine default branch for ${REPO}" >&2
+    exit 1
+  fi
 fi
 
 DESCRIPTION=$(cat "$BODY_FILE")

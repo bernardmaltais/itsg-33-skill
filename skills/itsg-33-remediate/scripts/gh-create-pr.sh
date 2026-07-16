@@ -19,17 +19,19 @@ if [[ ! -f "$BODY_FILE" ]]; then
 fi
 
 FINAL_BODY_FILE="$BODY_FILE"
+STDERR_FILE=$(mktemp)
+trap 'rm -f "$STDERR_FILE"' EXIT
 if [[ -n "$CLOSES_NUMBER" ]]; then
   FINAL_BODY_FILE=$(mktemp)
-  trap 'rm -f "$FINAL_BODY_FILE"' EXIT
+  trap 'rm -f "$FINAL_BODY_FILE" "$STDERR_FILE"' EXIT
   cat "$BODY_FILE" > "$FINAL_BODY_FILE"
   printf '\nCloses #%s\n' "$CLOSES_NUMBER" >> "$FINAL_BODY_FILE"
 fi
 
 echo "==> Creating draft PR '${TITLE}'..." >&2
 
-if ! URL=$(gh pr create --draft --title "$TITLE" --body-file "$FINAL_BODY_FILE" 2>&1); then
-  echo "gh-create-pr: gh pr create failed: ${URL}" >&2
+if ! URL=$(gh pr create --draft --title "$TITLE" --body-file "$FINAL_BODY_FILE" 2>"$STDERR_FILE"); then
+  echo "gh-create-pr: gh pr create failed: $(cat "$STDERR_FILE")" >&2
   exit 1
 fi
 

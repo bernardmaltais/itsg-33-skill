@@ -26,8 +26,10 @@ done
 
 echo "==> Creating issue '${TITLE}'..." >&2
 
-if ! URL=$(gh issue create --title "$TITLE" "${LABEL_ARGS[@]}" --body-file "$BODY_FILE" 2>&1); then
-  echo "gh-create-issue: gh issue create failed: ${URL}" >&2
+STDERR_FILE=$(mktemp)
+trap 'rm -f "$STDERR_FILE"' EXIT
+if ! URL=$(gh issue create --title "$TITLE" "${LABEL_ARGS[@]}" --body-file "$BODY_FILE" 2>"$STDERR_FILE"); then
+  echo "gh-create-issue: gh issue create failed: $(cat "$STDERR_FILE")" >&2
   exit 1
 fi
 

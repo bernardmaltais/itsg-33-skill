@@ -46,5 +46,7 @@ fi
 python3 -c "
 import json, sys
 d = json.loads(sys.argv[1])
-print(d['id'], '${ORG}/${PROJECT}/_workitems/edit/' + str(d['id']))
-" "$RAW"
+org = sys.argv[2]
+project = sys.argv[3]
+print(d['id'], org + '/' + project + '/_workitems/edit/' + str(d['id']))
+" "$RAW" "$ORG" "$PROJECT"

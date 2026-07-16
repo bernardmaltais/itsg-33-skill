@@ -484,7 +484,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### SI-10 — Information Input Validation
 **Severity:** P1  
-**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/*.cs`, `**/handler*.go`, `**/controller*.go`, `**/routes*.py`  
+**File patterns:** `{App source}`, `**/handler*.go`, `**/controller*.go`, `**/routes*.py`  
 **Pass signals:** Input validation present at API boundaries (schema validation, type checking, length limits, allowlisting); parameterized queries or ORM used (no string concatenation for SQL); HTML output encoded; file upload validation.  
 **Fail signals:** User input passed directly to queries, commands, or templates without sanitization; string concatenation in SQL; no schema validation on API inputs; file uploads accepted without type/size validation.  
 **Not Assessable:** No application source code (only IaC/config in repo).
@@ -493,7 +493,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### SI-11 — Error Handling
 **Severity:** P2  
-**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/error*.go`, `**/middleware*.go`  
+**File patterns:** `{App source}`, `**/error*.go`, `**/middleware*.go`  
 **Pass signals:** Error responses return generic messages to clients (no stack traces, no internal paths, no database errors); detailed errors logged server-side only; error handling middleware present; HTTP 500 responses do not include exception details.  
 **Fail signals:** Stack traces returned to HTTP clients; database error messages exposed in API responses; internal file paths in error messages; no error handling middleware.  
 **Not Assessable:** No application source code found.

@@ -9,10 +9,26 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ## How to read an entry
 
-- **File patterns** — glob patterns the skill uses for targeted reads. Read files matching these patterns first.
+- **File patterns** — glob patterns the skill uses for targeted reads. Read files matching these patterns first. A `{Name}` token in a File patterns line expands to the corresponding glob set defined in **Common Pattern Families** below.
 - **Pass signals** — concrete artifacts or config patterns that indicate the control is satisfied.
 - **Fail signals** — concrete artifacts or config patterns that indicate a gap.
 - **Not Assessable** — when to report Not Assessable instead of Pass or Fail.
+
+---
+
+## Common Pattern Families
+
+Reusable glob sets referenced by name from individual controls' File patterns lines, so
+adding support for a new tool or language means editing one definition here rather than
+sweeping every control that uses it.
+
+- **`{IaC}`** — `**/*.tf`, `**/*.bicep`, `**/*.template.yaml`, `**/*.template.json`, `**/cloudformation/**`, `**/Pulumi.*.yaml`, `**/*.pulumi.*`, `**/playbook*.yml`, `**/*.ansible.yml`
+- **`{CI/CD}`** — `.github/workflows/*.yaml`, `.gitlab-ci.yml`, `azure-pipelines*.yml`, `.circleci/config.yml`, `Jenkinsfile`
+- **`{App source}`** — `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/*.cs`, `**/*.rs`, `**/*.rb`, `**/*.php`, `**/*.kt`, `**/*.swift`, `**/*.cpp`, `**/*.scala`
+
+A control's File patterns line may combine a family token with its own control-specific
+literal patterns (e.g. `{IaC}`, `**/rbac*.yaml`) — the literal patterns stay inline since
+they aren't shared across controls.
 
 ---
 

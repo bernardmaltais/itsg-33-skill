@@ -68,15 +68,36 @@ Detect which file patterns are present in the repo:
 | Signal | Pattern |
 |--------|---------|
 | Terraform | `**/*.tf` |
+| Pulumi | `Pulumi.*.yaml`, `**/*.pulumi.*` |
+| CloudFormation / SAM | `**/*.template.yaml`, `**/*.template.json`, `**/cloudformation/**` |
+| Bicep / ARM | `**/*.bicep` |
+| Ansible | `**/playbook*.yml`, `**/*.ansible.yml` |
 | Kubernetes manifests | `**/*.yaml`, `**/*.yml` (k8s heuristic: contains `apiVersion:` and `kind:`) |
 | Helm values | `**/values*.yaml` |
 | Dockerfile | `**/Dockerfile*` |
 | GitHub Actions | `.github/workflows/*.yaml` |
+| GitLab CI | `.gitlab-ci.yml` |
+| Azure Pipelines | `azure-pipelines*.yml` |
+| CircleCI | `.circleci/config.yml` |
+| Jenkins | `Jenkinsfile` |
 | Go module | `go.mod` |
 | Node | `package.json` |
 | Python | `requirements*.txt`, `pyproject.toml` |
+| Rust | `Cargo.toml` |
+| Ruby | `Gemfile` |
+| PHP | `composer.json` |
+| Kotlin | `**/*.kt` |
+| Swift | `**/*.swift`, `Package.swift` |
+| C++ | `**/*.cpp`, `**/CMakeLists.txt` |
+| Scala | `**/*.scala`, `build.sbt` |
 
-Completion: list of detected signal families recorded (e.g., `[terraform, kubernetes, github-actions]`).
+Also record any other distinct top-level file extensions present in the repo that aren't
+covered above (a broad `find . -type f | sed 's/.*\.//' | sort -u`-style listing is
+sufficient). This catches a stack the table above doesn't anticipate at all, so Step 4b's
+fallback has something to check against for a control whose glob patterns come up empty.
+
+Completion: list of detected signal families recorded (e.g., `[terraform, kubernetes,
+github-actions]`), plus the catch-all extension list.
 
 ### Step 3 — Load control catalogue
 

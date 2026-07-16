@@ -2,9 +2,8 @@
 name: itsg-33-remediate
 description: >-
   Work open ITSG-33 gap issues one at a time under a TDD discipline, delivering
-  each fix as a branch and draft PR. Use when the user invokes itsg-33-remediate,
-  wants to fix a PBMM control gap produced by itsg-33-assess, or asks to work
-  through open itsg-33:gap issues.
+  each fix as a branch and draft PR. Use when the user wants to remediate PBMM
+  control gaps (itsg-33:gap issues) produced by itsg-33-assess.
 ---
 
 Work through the open gaps produced by `itsg-33-assess`, highest severity first,
@@ -175,15 +174,14 @@ For local tracker mode only, also add or update the same
 team can see the link while that file still exists, ahead of its manual
 deletion after merge.
 
-Known limitation: the evidence card is a generated file — a future
-`itsg-33-assess` run that re-assesses this control (a cache miss) rewrites it
-from `evidence-card.md`'s template, which has no `Remediation Ticket` field,
-silently dropping this line. Treat it as best-effort, not durable; the
-authoritative record is the merged PR itself (and, in GitHub mode, the closed
-gap issue's linked PR). `assessment-report.md`'s POA&M table won't show this
-link either, since it's generated from `assessment-state.yaml`, which also has
-no such field — closing that gap belongs to a future `itsg-33-assess` change,
-not this skill.
+Known limitation: this link is best-effort, not durable. A future
+`itsg-33-assess` re-assessment of this control (a cache miss) regenerates the
+evidence card from a template with no `Remediation Ticket` field, silently
+dropping it — and `assessment-report.md`'s POA&M table never carries it
+either, since it's generated from `assessment-state.yaml`, which also lacks
+the field. Rely on the merged PR (and, in GitHub mode, the closed gap issue)
+as the authoritative record; closing this regeneration gap belongs to a
+future `itsg-33-assess` change, not this skill.
 
 **If Step 8 stopped because there was no remote:** skip this step entirely — there is no PR URL
 to record yet. Proceed directly to Step 10.

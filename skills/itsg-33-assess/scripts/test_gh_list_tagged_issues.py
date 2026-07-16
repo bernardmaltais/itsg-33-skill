@@ -53,6 +53,7 @@ class GhListTaggedIssuesTest(unittest.TestCase):
         result = self._run(["itsg-33:gap"])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("gh issue list failed", result.stderr)
+        self.assertIn("error: not authenticated", result.stderr)
 
     def test_missing_arg_fails_fast(self):
         result = self._run([])

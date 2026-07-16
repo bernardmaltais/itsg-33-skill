@@ -139,8 +139,18 @@ requires every field to be present, so do not omit them. Use a short placeholder
 Skip to next control.
 
 **4b. Read relevant files**
-Glob the control's **File patterns** against the repo. If no files match any pattern →
-finding is **Not Assessable**; record `reason: no matching files`; skip to 4d.
+Glob the control's **File patterns** against the repo, expanding any `{Name}` token per
+`controls.md`'s Common Pattern Families section. If at least one file matches, read the
+matched files and proceed to 4c.
+
+If no files match any pattern, check the Step 2 survey for a tool or language present in
+the repo that this control's patterns didn't anticipate (e.g., the survey shows Pulumi,
+Bicep, CloudFormation, Ansible, GitLab CI, Azure Pipelines, or a source language outside
+`{App source}`'s list). If such a signal exists, glob for that tool's characteristic files
+(per the Step 2 table) and read them, then proceed to 4c.
+
+Only if this fallback also turns up nothing → finding is **Not Assessable**; record
+`reason: no matching files (including tech-stack fallback)`; skip to 4d.
 
 **4c. Reason**
 Read the matched files. Apply the control's **Pass signals** and **Fail signals** from

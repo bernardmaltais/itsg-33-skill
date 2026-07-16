@@ -122,6 +122,12 @@ uses to detect tracker mode):
 git remote -v
 ```
 
+**If no remote exists:** stop here — do not run `gh pr create` (there is nothing to open a PR
+against). Tell the user: the fix is committed on branch `itsg33/fix/<control-id>` with tests
+green, but no draft PR was opened because this repo has no GitHub remote; push a remote and
+re-invoke this step (or open the PR manually) once one exists. Completion (no-remote case): the
+branch and its green commit exist; the user has been told why no PR was opened.
+
 **If a remote exists:** proceed as below. Title: `fix(<control-id>): <control name> — <one-line summary>`.
 
 Body (fully self-contained — the reviewer should need nothing else open):
@@ -155,12 +161,6 @@ gh pr create --draft --title "<title>" --body "<body>"
 
 Completion: a draft PR exists with the correct title format and every body
 field populated (no field left as a placeholder).
-
-**If no remote exists:** stop here — do not run `gh pr create` (there is nothing to open a PR
-against). Tell the user: the fix is committed on branch `itsg33/fix/<control-id>` with tests
-green, but no draft PR was opened because this repo has no GitHub remote; push a remote and
-re-invoke this step (or open the PR manually) once one exists. Completion (no-remote case): the
-branch and its green commit exist; the user has been told why no PR was opened.
 
 ### Step 9 — Update POA&M
 

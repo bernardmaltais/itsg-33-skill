@@ -68,7 +68,7 @@ Detect which file patterns are present in the repo:
 | Signal | Pattern |
 |--------|---------|
 | Terraform | `**/*.tf` |
-| Pulumi | `Pulumi.*.yaml`, `**/*.pulumi.*` |
+| Pulumi | `**/Pulumi.*.yaml`, `**/*.pulumi.*` |
 | CloudFormation / SAM | `**/*.template.yaml`, `**/*.template.json`, `**/cloudformation/**` |
 | Bicep / ARM | `**/*.bicep` |
 | Ansible | `**/playbook*.yml`, `**/*.ansible.yml` |

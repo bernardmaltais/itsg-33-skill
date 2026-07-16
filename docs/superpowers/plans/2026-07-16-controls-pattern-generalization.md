@@ -24,24 +24,197 @@ code); `sed`/`grep` for scripted, verifiable bulk text substitution.
   plan — only **File patterns** lines and the two `SKILL.md` steps named above.
 - `test/fixtures/sample-app/` (Terraform + K8s + GitHub Actions + Python) must produce
   unchanged findings after this change — the family expansion is additive only.
+- **Task ordering is load-bearing:** the three bulk-substitution tasks (Tasks 1-3) MUST run
+  before the family-definitions section is inserted (Task 4). The family definitions
+  themselves contain the literal bare tokens being substituted elsewhere (e.g. `` `**/*.tf` ``
+  inside the `{IaC}` definition) — if the section existed first, Tasks 1-3's global `sed`
+  substitutions would also rewrite the definitions they're meant to populate, corrupting
+  them (e.g. turning `` - **`{IaC}`** — `**/*.tf`, ... `` into `` - **`{IaC}`** — `{IaC}`,
+  ... ``). Do not reorder these tasks.
 
 ---
 
-### Task 1: Add Common Pattern Families section to controls.md
+### Task 1: Replace bare `**/*.tf` with `{IaC}` across all controls
+
+**Files:**
+- Modify: `skills/itsg-33-assess/controls.md` (46 occurrences, all in **File patterns**
+  lines)
+
+**Interfaces:**
+- Produces: the `{IaC}` token now used in place of bare `**/*.tf` in 46 controls' File
+  patterns lines. Task 4 later adds the formal definition of what `{IaC}` expands to — until
+  then, this token is a forward reference (harmless in a Markdown doc mid-edit; the plan
+  lands both changes on the same branch).
+
+- [ ] **Step 1: Confirm baseline count**
+
+Run: `grep -o '`\*\*/\*\.tf`' skills/itsg-33-assess/controls.md | wc -l`
+Expected: `46`
+
+(This must be exactly 46 before proceeding. If it isn't, something upstream of this task
+touched an existing pattern line unexpectedly — stop and investigate before running the
+substitution.)
+
+- [ ] **Step 2: Run the substitution**
+
+```bash
+sed -i 's/`\*\*\/\*\.tf`/`{IaC}`/g' skills/itsg-33-assess/controls.md
+```
+
+This targets only the exact backtick-wrapped token `` `**/*.tf` ``, not the other
+control-specific `.tf` patterns (e.g. `` `**/bastion*.tf` ``, `` `**/backup*.tf` ``), which
+don't match this literal string and are left untouched.
+
+- [ ] **Step 3: Verify the substitution**
+
+Run: `grep -o '`\*\*/\*\.tf`' skills/itsg-33-assess/controls.md | wc -l`
+Expected: `0`
+
+Run: `grep -o '`{IaC}`' skills/itsg-33-assess/controls.md | wc -l`
+Expected: `46`
+
+Run: `grep -c '`\*\*/bastion\*\.tf`' skills/itsg-33-assess/controls.md`
+Expected: `1` (confirms control-specific `.tf` patterns were not touched)
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add skills/itsg-33-assess/controls.md
+git commit -m "Replace bare **/*.tf with {IaC} family reference in controls.md"
+```
+
+---
+
+### Task 2: Replace bare `.github/workflows/*.yaml` with `{CI/CD}` across all controls
+
+**Files:**
+- Modify: `skills/itsg-33-assess/controls.md` (15 occurrences)
+
+**Interfaces:**
+- Produces: the `{CI/CD}` token now used in place of bare `.github/workflows/*.yaml` in 15
+  controls' File patterns lines. Task 4 later adds the formal definition.
+
+- [ ] **Step 1: Confirm baseline count**
+
+Run: `grep -o '`\.github/workflows/\*\.yaml`' skills/itsg-33-assess/controls.md | wc -l`
+Expected: `15`
+
+- [ ] **Step 2: Run the substitution**
+
+```bash
+sed -i 's/`\.github\/workflows\/\*\.yaml`/`{CI\/CD}`/g' skills/itsg-33-assess/controls.md
+```
+
+- [ ] **Step 3: Verify the substitution**
+
+Run: `grep -o '`\.github/workflows/\*\.yaml`' skills/itsg-33-assess/controls.md | wc -l`
+Expected: `0`
+
+Run: `grep -o '`{CI/CD}`' skills/itsg-33-assess/controls.md | wc -l`
+Expected: `15`
+
+Run: `grep -c '`\.github/CODEOWNERS`' skills/itsg-33-assess/controls.md`
+Expected: `3` (confirms the other `.github/...` literal patterns, e.g. CODEOWNERS and
+branch_protection, were not touched)
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add skills/itsg-33-assess/controls.md
+git commit -m "Replace bare .github/workflows/*.yaml with {CI/CD} family reference in controls.md"
+```
+
+---
+
+### Task 3: Replace SI-10 and SI-11 language enumerations with `{App source}`
+
+**Files:**
+- Modify: `skills/itsg-33-assess/controls.md` (SI-10 and SI-11 File patterns lines only)
+
+**Interfaces:**
+- Produces: the `{App source}` token now used in SI-10 and SI-11's File patterns lines.
+  Task 4 later adds the formal definition.
+
+- [ ] **Step 1: Locate the two lines**
+
+Run: `grep -n "^\*\*File patterns:\*\* \`\*\*/\*\.go\`" skills/itsg-33-assess/controls.md`
+
+Expected: two matches — one for SI-10, one for SI-11, e.g.:
+```
+487:**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/*.cs`, `**/handler*.go`, `**/controller*.go`, `**/routes*.py`
+496:**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/error*.go`, `**/middleware*.go`
+```
+(Line numbers will differ from the pre-edit file since Tasks 1-2 shifted line numbers —
+match on content, not the exact numbers shown here.)
+
+- [ ] **Step 2: Edit the SI-10 line**
+
+Use the Edit tool on `skills/itsg-33-assess/controls.md`:
+
+old_string:
+```
+**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/*.cs`, `**/handler*.go`, `**/controller*.go`, `**/routes*.py`  
+```
+
+new_string:
+```
+**File patterns:** `{App source}`, `**/handler*.go`, `**/controller*.go`, `**/routes*.py`  
+```
+
+- [ ] **Step 3: Edit the SI-11 line**
+
+Use the Edit tool on `skills/itsg-33-assess/controls.md`:
+
+old_string:
+```
+**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/error*.go`, `**/middleware*.go`  
+```
+
+new_string:
+```
+**File patterns:** `{App source}`, `**/error*.go`, `**/middleware*.go`  
+```
+
+- [ ] **Step 4: Verify**
+
+Run: `grep -c "App source" skills/itsg-33-assess/controls.md`
+Expected: `2` (just these two usage lines — Task 4 hasn't added the definition line yet)
+
+Run: `grep -c '`\*\*/\*\.go`' skills/itsg-33-assess/controls.md`
+Expected: `0` (no bare `**/*.go` tokens remain anywhere)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add skills/itsg-33-assess/controls.md
+git commit -m "Replace SI-10/SI-11 language enumeration with {App source} family reference"
+```
+
+---
+
+### Task 4: Add Common Pattern Families section to controls.md
 
 **Files:**
 - Modify: `skills/itsg-33-assess/controls.md:9-17` (insert new section between "How to read
   an entry" and the AC family header)
 
 **Interfaces:**
-- Produces: three named glob families — `{IaC}`, `{CI/CD}`, `{App source}` — referenced by
-  every subsequent task in this plan.
+- Consumes: the `{IaC}`, `{CI/CD}`, and `{App source}` tokens already placed into control
+  entries by Tasks 1-3.
+- Produces: the formal definitions of all three families, plus the `{Name}`-expansion
+  cross-reference note in "How to read an entry" that Task 6 (SKILL.md Step 4b) relies on.
+
+This task runs **after** Tasks 1-3 specifically so the literal glob lists written into the
+definitions below (which reintroduce bare tokens like `` `**/*.tf` `` and `` `**/*.go` `` —
+this is the one place they're supposed to appear) are never touched by an earlier bulk
+`sed` pass. See the Global Constraints note on task ordering.
 
 - [ ] **Step 1: Read the current section boundary**
 
 Run: `sed -n '9,19p' skills/itsg-33-assess/controls.md`
 
-Expected output (current content, confirming insertion point):
+Expected output (current content, confirming insertion point — unaffected by Tasks 1-3
+since none of their edits touch this header section):
 ```
 ## How to read an entry
 
@@ -99,7 +272,7 @@ they aren't shared across controls.
 ## AC — Access Control
 ```
 
-- [ ] **Step 3: Verify the insertion**
+- [ ] **Step 3: Verify the insertion and total token counts**
 
 Run: `grep -n "^## Common Pattern Families$" skills/itsg-33-assess/controls.md`
 Expected: one match, e.g. `19:## Common Pattern Families`
@@ -107,164 +280,20 @@ Expected: one match, e.g. `19:## Common Pattern Families`
 Run: `grep -c '^\- \*\*`{IaC}`\*\*' skills/itsg-33-assess/controls.md`
 Expected: `1`
 
+Run: `grep -o '`{IaC}`' skills/itsg-33-assess/controls.md | wc -l`
+Expected: `47` (46 usages from Task 1, plus this section's own definition line)
+
+Run: `grep -o '`{CI/CD}`' skills/itsg-33-assess/controls.md | wc -l`
+Expected: `16` (15 usages from Task 2, plus this section's own definition line)
+
+Run: `grep -c "App source" skills/itsg-33-assess/controls.md`
+Expected: `3` (2 usages from Task 3, plus this section's own definition line)
+
 - [ ] **Step 4: Commit**
 
 ```bash
 git add skills/itsg-33-assess/controls.md
 git commit -m "Add Common Pattern Families section to controls.md"
-```
-
----
-
-### Task 2: Replace bare `**/*.tf` with `{IaC}` across all controls
-
-**Files:**
-- Modify: `skills/itsg-33-assess/controls.md` (46 occurrences, all in **File patterns**
-  lines below the AC family header)
-
-**Interfaces:**
-- Consumes: `{IaC}` family defined in Task 1.
-
-- [ ] **Step 1: Confirm baseline count**
-
-Run: `grep -o '`\*\*/\*\.tf`' skills/itsg-33-assess/controls.md | wc -l`
-Expected: `46`
-
-(This must be exactly 46 before proceeding — if it isn't, Task 1's insertion touched an
-existing pattern line unexpectedly; stop and investigate before running the substitution.)
-
-- [ ] **Step 2: Run the substitution**
-
-```bash
-sed -i 's/`\*\*\/\*\.tf`/`{IaC}`/g' skills/itsg-33-assess/controls.md
-```
-
-This targets only the exact backtick-wrapped token `` `**/*.tf` ``, not the other
-control-specific `.tf` patterns (e.g. `` `**/bastion*.tf` ``, `` `**/backup*.tf` ``), which
-don't match this literal string and are left untouched.
-
-- [ ] **Step 3: Verify the substitution**
-
-Run: `grep -o '`\*\*/\*\.tf`' skills/itsg-33-assess/controls.md | wc -l`
-Expected: `0`
-
-Run: `grep -o '`{IaC}`' skills/itsg-33-assess/controls.md | wc -l`
-Expected: `46`
-
-Run: `grep -c '`\*\*/bastion\*\.tf`' skills/itsg-33-assess/controls.md`
-Expected: `1` (confirms control-specific `.tf` patterns were not touched)
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add skills/itsg-33-assess/controls.md
-git commit -m "Replace bare **/*.tf with {IaC} family reference in controls.md"
-```
-
----
-
-### Task 3: Replace bare `.github/workflows/*.yaml` with `{CI/CD}` across all controls
-
-**Files:**
-- Modify: `skills/itsg-33-assess/controls.md` (15 occurrences)
-
-**Interfaces:**
-- Consumes: `{CI/CD}` family defined in Task 1.
-
-- [ ] **Step 1: Confirm baseline count**
-
-Run: `grep -o '`\.github/workflows/\*\.yaml`' skills/itsg-33-assess/controls.md | wc -l`
-Expected: `15`
-
-- [ ] **Step 2: Run the substitution**
-
-```bash
-sed -i 's/`\.github\/workflows\/\*\.yaml`/`{CI\/CD}`/g' skills/itsg-33-assess/controls.md
-```
-
-- [ ] **Step 3: Verify the substitution**
-
-Run: `grep -o '`\.github/workflows/\*\.yaml`' skills/itsg-33-assess/controls.md | wc -l`
-Expected: `0`
-
-Run: `grep -o '`{CI/CD}`' skills/itsg-33-assess/controls.md | wc -l`
-Expected: `15`
-
-Run: `grep -c '`\.github/CODEOWNERS`' skills/itsg-33-assess/controls.md`
-Expected: `3` (confirms the other `.github/...` literal patterns, e.g. CODEOWNERS and
-branch_protection, were not touched)
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add skills/itsg-33-assess/controls.md
-git commit -m "Replace bare .github/workflows/*.yaml with {CI/CD} family reference in controls.md"
-```
-
----
-
-### Task 4: Replace SI-10 and SI-11 language enumerations with `{App source}`
-
-**Files:**
-- Modify: `skills/itsg-33-assess/controls.md` (SI-10 and SI-11 File patterns lines only)
-
-**Interfaces:**
-- Consumes: `{App source}` family defined in Task 1.
-
-- [ ] **Step 1: Locate the two lines**
-
-Run: `grep -n "^\*\*File patterns:\*\* \`\*\*/\*\.go\`" skills/itsg-33-assess/controls.md`
-
-Expected: two matches — one for SI-10, one for SI-11, e.g.:
-```
-487:**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/*.cs`, `**/handler*.go`, `**/controller*.go`, `**/routes*.py`
-496:**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/error*.go`, `**/middleware*.go`
-```
-(Line numbers will differ from the pre-edit file since Tasks 1-3 shifted line numbers —
-match on content, not the exact numbers shown here.)
-
-- [ ] **Step 2: Edit the SI-10 line**
-
-Use the Edit tool on `skills/itsg-33-assess/controls.md`:
-
-old_string:
-```
-**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/*.cs`, `**/handler*.go`, `**/controller*.go`, `**/routes*.py`  
-```
-
-new_string:
-```
-**File patterns:** `{App source}`, `**/handler*.go`, `**/controller*.go`, `**/routes*.py`  
-```
-
-- [ ] **Step 3: Edit the SI-11 line**
-
-Use the Edit tool on `skills/itsg-33-assess/controls.md`:
-
-old_string:
-```
-**File patterns:** `**/*.go`, `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.java`, `**/error*.go`, `**/middleware*.go`  
-```
-
-new_string:
-```
-**File patterns:** `{App source}`, `**/error*.go`, `**/middleware*.go`  
-```
-
-- [ ] **Step 4: Verify**
-
-Run: `grep -c "App source" skills/itsg-33-assess/controls.md`
-Expected: `3` (the 1 definition line from Task 1, plus these 2 new usage lines)
-
-Run: `grep -c '`\*\*/\*\.go`' skills/itsg-33-assess/controls.md`
-Expected: `0` (no bare `**/*.go` tokens remain anywhere, including inside the family
-definition — it's written as `{App source}` there too, not spelled out)
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add skills/itsg-33-assess/controls.md
-git commit -m "Replace SI-10/SI-11 language enumeration with {App source} family reference"
 ```
 
 ---
@@ -394,7 +423,7 @@ git commit -m "Broaden SKILL.md Step 2 tech-stack survey beyond Terraform/K8s/Gi
 
 **Interfaces:**
 - Consumes: the Step 2 survey (Task 5) and the `{Name}` family-expansion note in
-  `controls.md` (Task 1).
+  `controls.md` (Task 4).
 
 - [ ] **Step 1: Read the current step**
 
@@ -501,8 +530,8 @@ Clean up afterward: `rm -rf /tmp/itsg33-pattern-check`.
 
 If all findings match: no code change needed, this task is done.
 
-If any finding regressed: identify which family substitution (Task 2, 3, or 4) dropped a
-pattern the fixture relied on, fix that family's definition in `controls.md` (Task 1's
+If any finding regressed: identify which family substitution (Task 1, 2, or 3) dropped a
+pattern the fixture relied on, fix that family's definition in `controls.md` (Task 4's
 section), and re-run this task's Step 2 before proceeding.
 
 ---
@@ -515,6 +544,13 @@ section), and re-run this task's Step 2 before proceeding.
 - **No placeholders:** every substitution is an exact `sed`/Edit old-string/new-string pair
   with a verifying `grep` command and expected count — nothing says "similarly update the
   rest" without showing the rest.
-- **Consistency:** `{IaC}`, `{CI/CD}`, `{App source}` names match exactly between Task 1's
-  definitions, Tasks 2-4's substitutions, and Task 6's Step 4b prose referencing `{App
+- **Consistency:** `{IaC}`, `{CI/CD}`, `{App source}` names match exactly between Task 4's
+  definitions, Tasks 1-3's substitutions, and Task 6's Step 4b prose referencing `{App
   source}` by name.
+- **Task ordering fix (post-review):** the bulk-substitution tasks (now Tasks 1-3) were
+  reordered to run *before* the family-definitions task (now Task 4). In the original draft
+  the definitions task ran first, which meant its own literal `` `**/*.tf` ``, `` `.github/
+  workflows/*.yaml` ``, and `` `**/*.go` `` text — written to *define* the families — would
+  have been caught and corrupted by the very `sed` substitutions those definitions were
+  meant to back. Caught during pre-flight plan review, before any implementer was
+  dispatched; verify counts in Tasks 1-3 and Task 4 reflect this order.

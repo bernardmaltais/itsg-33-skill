@@ -49,7 +49,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### AC-5 — Separation of Duties
 **Severity:** P2  
-**File patterns:** `.github/workflows/*.yaml`, `.github/CODEOWNERS`, `{IaC}`, `**/rbac*.yaml`  
+**File patterns:** `{CI/CD}`, `.github/CODEOWNERS`, `{IaC}`, `**/rbac*.yaml`  
 **Pass signals:** CODEOWNERS file requiring separate approvers for sensitive paths; GitHub Actions workflows require environment protection rules with required reviewers; IaC pipeline has separate plan and apply stages with approval gate; no single identity has both write and approve permissions.  
 **Fail signals:** Single identity or service account can both propose and approve changes; no CODEOWNERS; workflows deploy without approval gate; cluster-admin used for both operational and deployment tasks.  
 **Not Assessable:** No CI/CD pipeline files or RBAC manifests found.
@@ -104,7 +104,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### AC-17 — Remote Access
 **Severity:** P1  
-**File patterns:** `{IaC}`, `**/bastion*.tf`, `**/vpn*.tf`, `**/*.yaml`, `.github/workflows/*.yaml`  
+**File patterns:** `{IaC}`, `**/bastion*.tf`, `**/vpn*.tf`, `**/*.yaml`, `{CI/CD}`  
 **Pass signals:** Remote access only via bastion or VPN (no direct SSH/RDP to workload nodes); SSH keys managed via IaC (no hardcoded keys); MFA enforced for remote access in IdP config; session recording configured.  
 **Fail signals:** Direct SSH exposed on workload VMs (port 22 open to 0.0.0.0/0); hardcoded SSH keys in Terraform; no VPN or bastion config.  
 **Not Assessable:** No network/VM Terraform or remote access config found.
@@ -187,7 +187,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### AU-12 — Audit Generation
 **Severity:** P1  
-**File patterns:** `{IaC}`, `**/audit*.yaml`, `**/logging*.yaml`, `**/app*.yaml`, `.github/workflows/*.yaml`  
+**File patterns:** `{IaC}`, `**/audit*.yaml`, `**/logging*.yaml`, `**/app*.yaml`, `{CI/CD}`  
 **Pass signals:** Audit logging enabled at platform level (K8s audit policy, cloud provider audit logs); app-level audit logging for security-relevant events (auth, permission changes, data access); CI/CD pipeline logs artefacts and approvals.  
 **Fail signals:** K8s audit policy not configured; cloud audit logs disabled in Terraform; app has no audit logging for security events.  
 **Not Assessable:** No audit policy, logging config, or app security event logging found.
@@ -383,7 +383,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### CM-3 — Configuration Change Control
 **Severity:** P1  
-**File patterns:** `.github/workflows/*.yaml`, `.github/CODEOWNERS`, `.github/branch_protection*.yaml`, `{IaC}`  
+**File patterns:** `{CI/CD}`, `.github/CODEOWNERS`, `.github/branch_protection*.yaml`, `{IaC}`  
 **Pass signals:** Branch protection rules enforced (require PR, require reviews, no force push to main); CODEOWNERS file for sensitive paths; CI pipeline runs on all PRs; Terraform plan required before apply; change approval workflow visible in CI config.  
 **Fail signals:** No branch protection; no CODEOWNERS; direct commits to main allowed; no CI gate on PRs; Terraform apply without plan or approval.  
 **Not Assessable:** No CI/CD config or branch protection config found.
@@ -392,7 +392,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### CM-5 — Access Restrictions for Change
 **Severity:** P1  
-**File patterns:** `.github/CODEOWNERS`, `.github/workflows/*.yaml`, `{IaC}`  
+**File patterns:** `.github/CODEOWNERS`, `{CI/CD}`, `{IaC}`  
 **Pass signals:** CODEOWNERS restricts who can approve changes to IaC, security configs, and pipeline definitions; separate identities for deploying vs. approving; pipeline service account cannot approve its own PRs.  
 **Fail signals:** No CODEOWNERS; any team member can merge to main without review; pipeline identity has write access to approve PRs.  
 **Not Assessable:** No CODEOWNERS or pipeline config found.
@@ -428,7 +428,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### CM-10 — Software Usage Restrictions
 **Severity:** P3  
-**File patterns:** `.github/workflows/*.yaml`, `**/license*.yaml`, `**/.licensrc*`, `**/package.json`  
+**File patterns:** `{CI/CD}`, `**/license*.yaml`, `**/.licensrc*`, `**/package.json`  
 **Pass signals:** License scanning configured in CI (FOSSA, license-checker, trivy license scan); prohibited license types (GPL, AGPL) flagged; license policy file present.  
 **Fail signals:** No license scanning in CI; copyleft licenses in dependency tree without documented approval.  
 **Not Assessable:** No CI config or license scanning config found.
@@ -448,7 +448,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### SI-2 — Flaw Remediation
 **Severity:** P1  
-**File patterns:** `.github/workflows/*.yaml`, `**/dependabot.yaml`, `**/renovate.json`, `**/.trivyignore`, `**/trivy*.yaml`  
+**File patterns:** `{CI/CD}`, `**/dependabot.yaml`, `**/renovate.json`, `**/.trivyignore`, `**/trivy*.yaml`  
 **Pass signals:** Dependabot or Renovate configured for automated dependency updates; vulnerability scanning (Trivy, Grype, Snyk) in CI pipeline; CI fails on HIGH/CRITICAL CVEs; scan results reviewed (ignore files document accepted risks with justification).  
 **Fail signals:** No dependency update automation; no vulnerability scanning in CI; CI passes despite HIGH CVEs; no scan config found.  
 **Not Assessable:** No CI config, dependency manifests, or scan config found.
@@ -457,7 +457,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### SI-3 — Malicious Code Protection
 **Severity:** P1  
-**File patterns:** `.github/workflows/*.yaml`, `**/admission*.yaml`, `**/kyverno*.yaml`, `{IaC}`  
+**File patterns:** `{CI/CD}`, `**/admission*.yaml`, `**/kyverno*.yaml`, `{IaC}`  
 **Pass signals:** Container image scanning in CI before push (Trivy, Grype, Anchore); admission webhook rejects images with critical vulnerabilities; image signing enforced (Cosign); no unapproved base images.  
 **Fail signals:** No image scanning in CI; no admission webhook for image vulnerability policy; unsigned images admitted without verification.  
 **Not Assessable:** No CI config or admission webhook config found.
@@ -475,7 +475,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### SI-7 — Software, Firmware, and Information Integrity
 **Severity:** P2  
-**File patterns:** `.github/workflows/*.yaml`, `**/cosign*.yaml`, `**/admission*.yaml`, `**/policy*.yaml`  
+**File patterns:** `{CI/CD}`, `**/cosign*.yaml`, `**/admission*.yaml`, `**/policy*.yaml`  
 **Pass signals:** Image signing configured (Cosign); admission controller verifies signatures before admitting images; CI signs artefacts after build; integrity check on Helm chart or IaC downloads (checksum verification).  
 **Fail signals:** No image signing in CI; admission controller does not verify signatures; no artefact integrity verification.  
 **Not Assessable:** No CI config, signing config, or admission controller found.
@@ -513,7 +513,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### SA-10 — Developer Configuration Management
 **Severity:** P2  
-**File patterns:** `.gitignore`, `.gitattributes`, `.github/workflows/*.yaml`, `**/pre-commit*.yaml`  
+**File patterns:** `.gitignore`, `.gitattributes`, `{CI/CD}`, `**/pre-commit*.yaml`  
 **Pass signals:** `.gitignore` prevents secrets/credentials from being committed; commit signing configured (GPG or SSH); pre-commit hooks configured (secret scanning, linting); branch naming conventions enforced in CI.  
 **Fail signals:** No `.gitignore`; no secret scanning in pre-commit or CI; no commit signing; sensitive file patterns not gitignored.  
 **Not Assessable:** No git config or CI workflow files found.
@@ -522,7 +522,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### SA-11 — Developer Security Testing
 **Severity:** P1  
-**File patterns:** `.github/workflows/*.yaml`, `**/sonar*.yaml`, `**/semgrep*.yaml`, `**/bandit*.yaml`, `**/gosec*.yaml`  
+**File patterns:** `{CI/CD}`, `**/sonar*.yaml`, `**/semgrep*.yaml`, `**/bandit*.yaml`, `**/gosec*.yaml`  
 **Pass signals:** SAST tool configured in CI (Semgrep, SonarQube, Bandit, gosec, CodeQL); dependency vulnerability scan in CI; DAST configured for pre-production environment; security scan results block merge on HIGH/CRITICAL findings.  
 **Fail signals:** No SAST in CI; no dependency scanning; security scans optional (don't block merge); no DAST config.  
 **Not Assessable:** No CI config found.
@@ -531,7 +531,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### SA-15 — Development Process, Standards, and Tools
 **Severity:** P3  
-**File patterns:** `.github/workflows/*.yaml`, `**/Makefile`, `**/.pre-commit-config.yaml`, `**/linting*.yaml`  
+**File patterns:** `{CI/CD}`, `**/Makefile`, `**/.pre-commit-config.yaml`, `**/linting*.yaml`  
 **Pass signals:** CI pipeline defined and enforced for all branches; linting configured (language-appropriate linter in CI); code review required (branch protection); consistent toolchain versions pinned (`.tool-versions`, `go.toolchain`, `nvmrc`).  
 **Fail signals:** No CI pipeline; no linting; inconsistent toolchain versions; no code review enforcement.  
 **Not Assessable:** No CI config or build tooling found.
@@ -540,7 +540,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### SA-22 — Unsupported System Components
 **Severity:** P1  
-**File patterns:** `**/package.json`, `**/go.mod`, `**/requirements.txt`, `**/Dockerfile`, `.github/workflows/*.yaml`  
+**File patterns:** `**/package.json`, `**/go.mod`, `**/requirements.txt`, `**/Dockerfile`, `{CI/CD}`  
 **Pass signals:** All dependencies on supported versions (no EOL runtimes, libraries, or base images); EOL detection in CI (endoflife.date check, Dependabot alerts); base image versions pinned to current supported tags.  
 **Fail signals:** EOL Node.js, Python, Go, or Java version in Dockerfile or runtime config; dependencies on archived/unmaintained packages; no EOL detection in CI.  
 **Not Assessable:** No dependency manifests or Dockerfile found.
@@ -560,7 +560,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### CP-10 — Information System Recovery and Reconstitution
 **Severity:** P2  
-**File patterns:** `{IaC}`, `**/dr*.yaml`, `**/recovery*.yaml`, `.github/workflows/*.yaml`  
+**File patterns:** `{IaC}`, `**/dr*.yaml`, `**/recovery*.yaml`, `{CI/CD}`  
 **Pass signals:** Disaster recovery config in Terraform (geo-redundant storage, failover group, cross-region replication); recovery scripts or runbooks exist as code; RTO/RPO targets referenced in config comments or documentation; DR test workflow in CI.  
 **Fail signals:** No redundancy or failover in Terraform; no recovery scripts; single-region only with no failover config.  
 **Not Assessable:** No DR, redundancy, or failover Terraform found.
@@ -571,7 +571,7 @@ Per-control guidance for `itsg-33-assess`. Each entry tells the LLM what to look
 
 ### RA-5 — Vulnerability Scanning
 **Severity:** P1  
-**File patterns:** `.github/workflows/*.yaml`, `**/trivy*.yaml`, `**/grype*.yaml`, `**/.snyk`, `**/checkov*.yaml`  
+**File patterns:** `{CI/CD}`, `**/trivy*.yaml`, `**/grype*.yaml`, `**/.snyk`, `**/checkov*.yaml`  
 **Pass signals:** Vulnerability scanner configured in CI (Trivy, Grype, Snyk, Checkov); scans run on every PR and scheduled (e.g., weekly); scan results block merge on HIGH/CRITICAL; IaC scanning configured (Checkov, tfsec); container image scanning configured.  
 **Fail signals:** No vulnerability scanner in CI; scans do not block merge; no scheduled scans; IaC not scanned; no image scanning.  
 **Not Assessable:** No CI config or scan tooling config found.

@@ -281,7 +281,8 @@ Run: `grep -c '^\- \*\*`{IaC}`\*\*' skills/itsg-33-assess/controls.md`
 Expected: `1`
 
 Run: `grep -o '`{IaC}`' skills/itsg-33-assess/controls.md | wc -l`
-Expected: `47` (46 usages from Task 1, plus this section's own definition line)
+Expected: `48` (46 usages from Task 1, plus this section's own definition bullet, plus one more
+mention in this section's "e.g. `{IaC}`, `**/rbac*.yaml`" example sentence)
 
 Run: `grep -o '`{CI/CD}`' skills/itsg-33-assess/controls.md | wc -l`
 Expected: `16` (15 usages from Task 2, plus this section's own definition line)

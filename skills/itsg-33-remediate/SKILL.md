@@ -1,12 +1,12 @@
 ---
 name: itsg-33-remediate
 description: >-
-  Remediate open ITSG-33 gap issues one at a time under a TDD discipline, delivering
+  Work open ITSG-33 gap issues one at a time under a TDD discipline, delivering
   each fix as a branch and draft PR. Use when the user wants to remediate PBMM
   control gaps (itsg-33:gap issues) produced by itsg-33-assess.
 ---
 
-Remediate the open gaps produced by `itsg-33-assess`, highest severity first,
+Work through the open gaps produced by `itsg-33-assess`, highest severity first,
 one at a time. Every fix follows the same discipline: capture a test baseline,
 propose the fix, apply it on its own branch, verify tests are green, then open a
 self-contained draft PR. Never touch `main` directly, and never move to the next

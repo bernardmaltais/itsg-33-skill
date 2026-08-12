@@ -32,17 +32,6 @@ Canonical structure for `security/assessment-report.md` (Step 7) and
 |------------|---------|------------|----------|--------------------|-------|-------------|--------------------|
 | ...        | Fail    | ...        | P1       | ...                |       |             |                    |
 
-## Detected Technology Without a Mapped Control
-
-Informational only — never feeds Pass/Fail logic. Lists any role recorded in
-`security/file-roles.yaml` (Step 3) that isn't referenced by any control's File patterns
-(roles) line in `controls.md`, i.e. a novel role the classification subagent assigned
-because no described role fit. Omit this section entirely if there are none.
-
-| Role | File count | Example paths |
-|------|-----------|----------------|
-| ...  | ...       | ...            |
-
 ## Evidence Cards Index
 
 <bulleted list of links to security/evidence/<control-id>.md>

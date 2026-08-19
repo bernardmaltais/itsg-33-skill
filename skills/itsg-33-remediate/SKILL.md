@@ -23,26 +23,17 @@ bash skills/itsg-33-remediate/scripts/gh-list-tagged-issues.sh itsg-33:gap
 
 **Azure DevOps mode** (`tracker: azure-devops`):
 ```bash
-bash skills/itsg-33-remediate/scripts/ado-list-tagged-items.sh "<ado_org>" "<ado_project>" itsg-33:gap
+bash skills/itsg-33-remediate/scripts/ado-fetch-gaps.sh "<ado_org>" "<ado_project>" itsg-33:gap
 ```
-For each returned `id`, fetch full field values:
-```bash
-az boards work-item show --id <id> --org "<ado_org>" -o json
-```
-Control ID/name are parsed from the title (`[itsg-33:gap] <Control ID> — <Control Name>` — the
-same format `itsg-33-assess` used to create it). Source reference is the work item ID/URL
-(`<ado_org>/<ado_project>/_workitems/edit/<id>`).
+Outputs a JSON array of `{"id", "control_id", "control_name", "source_ref"}` records.
 
 **Local mode** (`tracker: local`):
 Read every file in `security/gaps/`, **excluding** files ending in
 `-needs-test.md` — those are tasks created by a prior Step 4, not gaps.
 
 For every open gap (any mode), also read its linked evidence card,
-`security/evidence/<control-id>.md`. The evidence card — not the gap issue, work item, or gap
-file — is the source of truth for **Severity**, since `evidence-card.md`'s
-`**Severity:** <P1 | P2 | P3>` header field is the only place severity is
-recorded in a form every tracker mode can read the same way (GitHub conveys it only via issue
-label and Azure DevOps only via a tag, neither of which local mode has an equivalent of).
+`security/evidence/<control-id>.md`. The evidence card is the source of truth for **Severity**
+(its `**Severity:** <P1 | P2 | P3>` field is the only mode-agnostic severity record).
 
 Build one record per gap with: control ID, control name, severity, finding,
 confidence note, recommended action, evidence card path, and a source
@@ -82,34 +73,19 @@ must match or beat, and what Step 8's PR body cites as the "before" result.
 **If no runner is found:** stop — do not propose or apply a fix for this gap.
 Create a needs-test task instead:
 
-- GitHub mode:
-  ```bash
-  bash skills/itsg-33-remediate/scripts/gh-create-issue.sh \
-    "[itsg-33:needs-test] <control-id> — write failing test" \
-    itsg-33:needs-test \
-    <body-file>
-  ```
-  where `<body-file>` explains the gap needs a test that fails against the current code before
-  `itsg-33-remediate` can touch it.
-- Azure DevOps mode:
-  ```bash
-  bash skills/itsg-33-remediate/scripts/ado-create-work-item.sh \
-    "<ado_org>" "<ado_project>" Issue \
-    "[itsg-33:needs-test] <control-id> — write failing test" \
-    itsg-33:needs-test \
-    <description-file>
-  ```
-  with the same explanation, written as simple HTML.
-- Local mode: write `security/gaps/<control-id>-needs-test.md` with the same
-  content.
+```bash
+bash skills/itsg-33-remediate/scripts/create-needs-test-task.sh <mode> <control-id> <body-file> [<ado_org> <ado_project>]
+```
+where `<body-file>` explains the gap needs a test that fails against the current code before
+`itsg-33-remediate` can touch it (plain text for GitHub/local, simple HTML for ADO).
 
 Then go straight to Step 10's continue-or-stop gate for this gap (skip Steps
 5-9 entirely) — creating the task pauses work on *this* gap, it does not end
 the whole run, so the user still decides whether to move on to the next queued
 gap or stop here.
 
-Completion: either a captured pass/fail baseline, or a needs-test task created
-and the Step 10 gate reached.
+Completion: either a captured pass/fail baseline, or `create-needs-test-task.sh`
+exited 0 and the Step 10 gate reached.
 
 ### Step 5 — Propose fix
 
@@ -140,19 +116,17 @@ discarding them. Completion: the Step 4 command exits clean on this branch.
 
 ### Step 8 — Open draft PR
 
-First, check whether a usable remote exists (the same check `itsg-33-assess` Step 1
-uses to detect tracker mode):
+First, check whether a usable remote exists:
 
 ```bash
-git remote -v
+bash skills/itsg-33-remediate/scripts/check-remote.sh
 ```
+Prints `remote` or `local` to stdout.
 
-**If no remote exists (`tracker: local`):** stop here — do not attempt to open a PR (there is
-nothing to open one against). Tell the user: the fix is committed on branch
-`itsg33/fix/<control-id>` with tests green, but no draft PR was opened because this repo has no
-remote; push a remote and re-invoke this step (or open the PR manually) once one exists.
-Completion (no-remote case): the branch and its green commit exist; the user has been told why no
-PR was opened.
+**If `check-remote.sh` prints `local`:** stop here — do not attempt to open a PR. Tell the user
+the fix is on branch `itsg33/fix/<control-id>` with green tests, but no PR was opened because
+there is no remote.
+Completion (no-remote case): branch exists with green commit; user informed.
 
 **If a remote exists:** proceed as below. Title: `fix(<control-id>): <control name> — <one-line summary>`.
 
@@ -195,19 +169,12 @@ bash skills/itsg-33-remediate/scripts/ado-create-pr.sh \
   "<ado_org>" "<ado_project>" "<ado_repo>" \
   "<source-branch>" "<title>" <body-file> <work-item-id>
 ```
-Target branch is omitted — the script auto-detects the repo's default branch. The script's
-`az repos pr create --work-items` call links the gap work item in the same invocation; there is
-no separate linking step. **Known limitation:** this links the PR to the work item but does not
-by itself close the work item on merge — whether it auto-transitions depends on the org's own
-branch-policy/completion settings, outside this skill's scope since it only ever creates a draft
-PR. Treat this the same as local mode's manual-cleanup posture, not GitHub mode's automatic
-`Closes #N` behavior.
-
-**Local mode:** no script — there is nothing to open a PR against (handled by the no-remote
-branch above).
+Target branch is omitted — the script auto-detects the repo's default branch. The script links
+the gap work item via `--work-items`. **Known limitation:** auto-close on merge depends on the
+org's branch-policy settings, not this skill.
 
 Completion: a draft PR exists with the correct title format and every body
-field populated (no field left as a placeholder).
+field populated (no placeholders left).
 
 ### Step 9 — Update POA&M
 
@@ -217,25 +184,21 @@ update a `**Remediation Ticket:** <PR URL>` line, alongside its existing `Severi
 it — not the gap issue or gap file, which close or get deleted — is where this link needs to
 survive.
 
-For local tracker mode only, also add or update the same
-`**Remediation Ticket:** <PR URL>` line in the still-open gap file, so the
-team can see the link while that file still exists, ahead of its manual
-deletion after merge.
+For local tracker mode only, also update the gap file:
 
-Known limitation: this link is best-effort, not durable. A future
-`itsg-33-assess` re-assessment of this control (a cache miss) regenerates the
-evidence card from a template with no `Remediation Ticket` field, silently
-dropping it — and `assessment-report.md`'s POA&M table never carries it
-either, since it's generated from `assessment-state.yaml`, which also lacks
-the field. Rely on the merged PR (and, in GitHub mode, the closed gap issue)
-as the authoritative record; closing this regeneration gap belongs to a
-future `itsg-33-assess` change, not this skill.
+```bash
+bash skills/itsg-33-remediate/scripts/update-gap-file-ticket.sh "security/gaps/<control-id>.md" "<pr-url>"
+```
+
+Known limitation: this link is best-effort — a future `itsg-33-assess` re-assessment
+regenerates the evidence card without this field. Rely on the merged PR as the authoritative
+record.
 
 **If Step 8 stopped because there was no remote:** skip this step entirely — there is no PR URL
 to record yet. Proceed directly to Step 10.
 
-Completion: either the evidence card's (and, in local mode, the gap file's) `Remediation
-Ticket` field is set to the PR URL, or Step 8 had no remote and this step was skipped.
+Completion: either the evidence card's `Remediation Ticket` field is set (and, in local mode,
+`update-gap-file-ticket.sh` exited 0), or Step 8 had no remote and this step was skipped.
 
 ### Step 10 — Continue or stop
 
